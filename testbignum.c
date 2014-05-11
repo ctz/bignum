@@ -36,29 +36,28 @@ int main(void)
   bignum r = bignum_alloc();
   bignum a = bignum_alloc();
   bignum b = bignum_alloc();
-  bignum_set(&b, 32);
+  bignum_setu(&b, 32);
   print("32", &b);
   bignum_neg(&b);
   print("-32", &b);
   bignum_abs(&b);
   print("abs(-32)", &b);
 
-  bignum_set(&a, 0xffff);
-  bignum_set(&b, 0x80003333);
+  bignum_setu(&a, 0xffffffff);
+  bignum_setu(&r, 0);
 
   print("a", &a);
   print("b", &b);
 
-  error err = bignum_add(&r, &a, &b);
+  error err = bignum_add(&r, &a, &bignum_1);
   assert(err == OK);
-  
   print("r0", &r);
 
-  err = bignum_add(&r, &r, &b);
+  err = bignum_add(&r, &r, &a);
   assert(err == OK);
   print("r1", &r);
   
-  err = bignum_add(&r, &r, &b);
+  err = bignum_add(&r, &r, &bignum_1);
   assert(err == OK);
   print("r2", &r);
 

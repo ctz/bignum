@@ -96,7 +96,11 @@ uint8_t bignum_get_byte(const bignum *b, size_t n);
  *
  * This cannot fail, because even zero needs one word available.
  * However, as normal it will fail an assert if b is immutable. */
-void bignum_set(bignum *b, uint32_t l);
+void bignum_set(bignum *b, int32_t v);
+
+/** As bignum_set, but with an unsigned value.  The result is
+ *  positive. */
+void bignum_setu(bignum *b, uint32_t v);
 
 /** b = -b. */
 void bignum_neg(bignum *b);
@@ -107,8 +111,29 @@ void bignum_abs(bignum *b);
 /** (b < 0) ? -1 : 1 */
 int bignum_sign(const bignum *b);
 
-/** Returns 1 if b is negative, 0 others. */
-unsigned bignum_is_negative(const bignum *b);
+/** Returns 1 if b is negative, 0 otherwise. */
+static inline unsigned bignum_is_negative(const bignum *b)
+{
+  return bignum_sign(b) == -1;
+}
+
+/** Returns 1 if a == b, 0 otherwise. */
+unsigned bignum_eq(const bignum *a, const bignum *b);
+
+/** Returns 1 if a == b, 0 otherwise.  In constant time. */
+unsigned bignum_const_eq(const bignum *a, const bignum *b);
+
+/** Returns a < b. */
+unsigned bignum_lt(const bignum *a, const bignum *b);
+
+/** Returns a <= b. */
+unsigned bignum_lte(const bignum *a, const bignum *b);
+
+/** Returns a > b. */
+unsigned bignum_gt(const bignum *a, const bignum *b);
+
+/** Returns a >= b. */
+unsigned bignum_gte(const bignum *a, const bignum *b);
 
 /** r = a + b.
  *
@@ -118,6 +143,22 @@ error bignum_add(bignum *r, const bignum *a, const bignum *b);
 /** a += b.
  *
  * a and b can alias. */
-error bignum_addl(bignum *a, const bignum *b);
+static inline error bignum_addl(bignum *a, const bignum *b)
+{
+  return bignum_add(a, a, b);
+}
+
+/** r = a - b.
+ *
+ * Any of r, a and b can alias. */
+error bignum_sub(bignum *r, const bignum *a, const bignum *b);
+
+/** a -= b
+ *
+ * a and b can alias. */
+static inline error bignum_subl(bignum *a, const bignum *b)
+{
+  return bignum_sub(a, a, b);
+}
 
 #endif

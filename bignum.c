@@ -47,13 +47,25 @@ void bignum_clear(bignum *b)
   memset(b, 0, sizeof *b);
 }
 
-void bignum_set(bignum *b, uint32_t l)
+void bignum_setu(bignum *b, uint32_t l)
 {
   assert(!bignum_check_mutable(b));
   memset(b->v, 0, b->words * BIGNUM_BYTES);
   *b->v = l;
   b->vtop = b->v;
+  b->flags &= ~BIGNUM_F_NEG;
   bignum_canon(b);
+}
+
+void bignum_set(bignum *b, int32_t v)
+{
+  if (v < 0)
+  {
+    bignum_setu(b, (uint32_t) -v);
+    b->flags |= BIGNUM_F_NEG;
+  } else {
+    bignum_setu(b, (uint32_t) v);
+  }
 }
 
 void bignum_neg(bignum *b)
@@ -95,11 +107,6 @@ int bignum_sign(const bignum *b)
     return -1;
   else
     return 1;
-}
-
-unsigned bignum_is_negative(const bignum *b)
-{
-  return bignum_sign(b) == -1;
 }
 
 static uint8_t topbit_index(uint32_t v)
@@ -160,22 +167,113 @@ error bignum_add(bignum *r, const bignum *a, const bignum *b)
     if (rv - r->v >= r->words)
       return error_bignum_sz;
 
-    uint32_t aw = 0, bw = 0, rw;
+    uint32_t rw = carry;
+    carry = 0;
 
     if (have_a)
-      aw = *av++;
-    if (have_b)
-      bw = *bv++;
+    {
+      uint32_t aw = *av++;
+      rw += aw;
+      if (rw < aw)
+        carry = 1;
+    }
 
-    rw = aw + bw + carry;
-    carry = ((aw != 0 && rw < aw) || (bw != 0 && rw < bw));
+    if (have_b)
+    {
+      uint32_t bw = *bv++;
+      rw += bw;
+      if (rw < bw)
+        carry = 1;
+    }
+
     *rv = rw;
   }
+
+  if (bignum_is_negative(a) && bignum_is_negative(b))
+    r->flags |= BIGNUM_F_NEG;
+  else
+    r->flags &= ~BIGNUM_F_NEG;
 
   return OK;
 }
 
-error bignum_addl(bignum *a, const bignum *b)
+unsigned bignum_lt(const bignum *a, const bignum *b)
 {
-  return bignum_add(a, a, b);
+  assert(!bignum_check(a));
+  assert(!bignum_check(b));
+
+  /* Check sign */
+  if (bignum_sign(a) < bignum_sign(b))
+    return 1;
+  else if (bignum_sign(a) > bignum_sign(b))
+    return 0;
+
+  /* Check sizes */
+  size_t sza = bignum_len_bits(a);
+  size_t szb = bignum_len_bits(b);
+
+  if (sza < szb)
+    return 1;
+  else if (sza > szb)
+    return 0;
+  
+  /* Now run through word values. */
+  for (uint32_t *va = a->vtop, *vb = b->vtop;
+       va != a->v && vb != b->v;
+       va++, vb++)
+  {
+    if (*va < *vb)
+      return 1;
+  }
+
+  return 0;
+}
+
+unsigned bignum_lte(const bignum *a, const bignum *b)
+{
+  return bignum_lt(a, b) || bignum_eq(a, b);
+}
+
+unsigned bignum_gt(const bignum *a, const bignum *b)
+{
+  return bignum_lte(b, a);
+}
+
+unsigned bignum_gte(const bignum *a, const bignum *b)
+{
+  return bignum_lt(b, a);
+}
+
+unsigned bignum_eq(const bignum *a, const bignum *b)
+{
+  if (bignum_sign(a) != bignum_sign(b))
+    return 0;
+
+  if (bignum_len_bits(a) != bignum_len_bits(b))
+    return 0;
+
+  for (uint32_t *va = a->vtop, *vb = b->vtop;
+       va != a->v && vb != b->v;
+       va++, vb++)
+  {
+    if (*va != *vb)
+      return 0;
+  }
+
+  return 1;
+}
+
+unsigned bignum_const_eq(const bignum *a, const bignum *b)
+{
+  uint32_t neq = (bignum_sign(a) ^ bignum_sign(b));
+  neq |= (bignum_len_bits(a) ^ bignum_len_bits(b));
+
+  for (uint32_t *va = a->vtop, *vb = b->vtop;
+       va != a->v && vb != b->v;
+       va++, vb++)
+  {
+    neq |= (*va ^ *vb);
+  }
+  
+  return !neq;
 }
