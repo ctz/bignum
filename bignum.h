@@ -9,7 +9,8 @@ typedef enum
   OK = 0,
   error_invalid_bignum,
   error_buffer_sz,
-  error_bignum_sz
+  error_bignum_sz,
+  error_invalid_string
 } error;
 
 #define BIGNUM_BYTES 4
@@ -74,6 +75,9 @@ void bignum_canon(bignum *b);
 /** Zeroes all digits, and leave structure b invalid. */
 void bignum_clear(bignum *b);
 
+/** Copies the value of a into r. */
+error bignum_dup(bignum *r, const bignum *a);
+
 /** Returns the number of bits needed to store the magnitude of b
  *  in binary.
  *  Zero needs 1 bit. */
@@ -91,6 +95,14 @@ size_t bignum_len_bytes(const bignum *b);
  *  Out of range n (ie >= bignum_len_bytes(b)) returns zero.
  */
 uint8_t bignum_get_byte(const bignum *b, size_t n);
+
+/** Sets the value of the nth byte in the bignum to v.
+ *
+ *  Same semantics for n as bignum_get_byte.
+ *
+ *  Out of range n returns error_bignum_sz.
+ */
+error bignum_set_byte(bignum *b, uint8_t v, size_t n);
 
 /** Set b to have value l.
  *
@@ -159,6 +171,19 @@ error bignum_sub(bignum *r, const bignum *a, const bignum *b);
 static inline error bignum_subl(bignum *a, const bignum *b)
 {
   return bignum_sub(a, a, b);
+}
+
+/** r = a * b.
+ *
+ * Any of r, a and b can alias. */
+error bignum_mul(bignum *r, const bignum *a, const bignum *b);
+
+/** a *= b;
+ *
+ * a and b can alias. */
+static inline error bignum_mull(bignum *a, const bignum *b)
+{
+  return bignum_mul(a, a, b);
 }
 
 #endif

@@ -2,9 +2,11 @@
 #include <stdlib.h>
 #include <string.h>
 #include <assert.h>
+#include <ctype.h>
 
 #include "bignum.h"
 #include "bignum-str.h"
+#include "ext/cutest.h"
 
 static bignum bignum_alloc(void)
 {
@@ -31,7 +33,7 @@ static void print(const char *label, const bignum *b)
   printf("%s = %s\n", label, buf);
 }
 
-int main(void)
+void basic_test(void)
 {
   bignum r = bignum_alloc();
   bignum a = bignum_alloc();
@@ -65,5 +67,117 @@ int main(void)
   bignum_free(&a);
   bignum_free(&b);
   printf("ok\n");
-  return 0;
 }
+
+typedef unsigned (*eqfn)(const bignum *a, const bignum *b);
+
+static unsigned both_eq(const bignum *a, const bignum *b)
+{
+  unsigned r = bignum_eq(a, b);
+  TEST_CHECK_(r == bignum_const_eq(a, b), "bignum_const_eq does not agree with bignum_eq");
+  return r;
+}
+
+static unsigned not_eq(const bignum *a, const bignum *b)
+{
+  return !both_eq(a, b);
+}
+
+typedef struct
+{
+  const char *str;
+  eqfn fn;
+} eq;
+
+/* nb. must be longest first. */
+static const eq equalities[] = {
+  { "==", both_eq },
+  { "!=", not_eq },
+  { "<=", bignum_lte },
+  { ">=", bignum_gte },
+  { "<", bignum_lt },
+  { ">", bignum_gt },
+  { NULL }
+};
+
+static void trim(const char **start,
+                 const char **end)
+{
+  while (isspace(**start))
+    (*start)++;
+
+  while (isspace(*(*end - 1)))
+    (*end)--;
+}
+
+static void split_eq(const char *expr,
+                     const char **left,
+                     const char **endleft,
+                     const char **right,
+                     const char **endright,
+                     const eq **equality)
+{
+  for (const eq *e = equalities;
+       e->str;
+       e++)
+  {
+    const char *found = strstr(expr, e->str);
+    if (found)
+    {
+      *left = expr;
+      *endleft = found;
+      *right = found + strlen(e->str);
+      *endright = *right + strlen(*right);
+      trim(left, endleft);
+      trim(right, endright);
+      *equality = e;
+      return;
+    }
+  }
+
+  TEST_CHECK_(0, "Expression '%s' does not contain operator", expr);
+  abort();
+}
+
+static void check(const char *expr)
+{
+  const char *left, *right;
+  const char *endleft, *endright;
+  const eq *equality;
+  error err;
+  split_eq(expr, &left, &endleft, &right, &endright, &equality);
+
+  bignum a = bignum_alloc(), b = bignum_alloc();
+  err = bignum_parse_strl(&a, left, endleft - left);
+  assert(err == OK);
+  err = bignum_parse_strl(&b, right, endright - right);
+  assert(err == OK);
+  TEST_CHECK_(equality->fn(&a, &b) == 1, "Expression '%s' is not true", expr);
+  print("a", &a);
+  print("b", &b);
+  printf("%s -> %u\n", expr, equality->fn(&a, &b));
+  bignum_free(&a);
+  bignum_free(&b);
+
+}
+
+static void inequality(void)
+{
+  check("0x1 == 0x1");
+  check("0x0 != 0x1");
+  check("1 == 1");
+  check("0 != 1");
+  check("-1 < 1");
+  check("-1 <= -1");
+  check("1 >= 1");
+  check("0 <= 0");
+  check("1 >= 0");
+  check("1 > -1");
+  check("1234567890123456789 > 1234567890123456788");
+}
+
+TEST_LIST = {
+  { "basic_test", basic_test },
+  { "inequality", inequality },
+  { 0 }
+};

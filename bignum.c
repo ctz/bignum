@@ -1,6 +1,7 @@
 
 #include <assert.h>
 #include <string.h>
+#include <stdio.h>
 
 #include "bignum.h"
 
@@ -16,6 +17,7 @@ error bignum_check(const bignum *b)
       b->vtop == NULL ||
       b->v > b->vtop ||
       b->vtop - b->v >= b->words ||
+      b->words == 0 ||
       b->words >= BIGNUM_MAX_WORDS ||
       (b->flags & ~BIGNUM_F__ALL))
     return error_invalid_bignum;
@@ -27,6 +29,24 @@ static error bignum_check_mutable(const bignum *b)
   error e = bignum_check(b);
   assert(!(b->flags & BIGNUM_F_IMMUTABLE));
   return e;
+}
+
+/* Moves vtop right to the top of storage, zeroing
+ * as it goes.
+ *
+ * Use this to prepare a bignum for arbitrary writes
+ * to storage, then use bignum_canon afterwards to
+ * adjust vtop back down. */
+void bignum_cleartop(bignum *b)
+{
+  assert(!bignum_check_mutable(b));
+  uint32_t *newtop = b->v + b->words - 1;
+
+  while (b->vtop != newtop)
+  {
+    *b->vtop = 0;
+    b->vtop++;
+  }
 }
 
 void bignum_canon(bignum *b)
@@ -45,6 +65,29 @@ void bignum_clear(bignum *b)
   for (uint32_t *v = b->v; v <= b->vtop; v++)
     *v = 0;
   memset(b, 0, sizeof *b);
+}
+
+error bignum_dup(bignum *r, const bignum *a)
+{
+  assert(!bignum_check_mutable(r));
+  assert(!bignum_check(a));
+
+  if (a->vtop - a->v >= r->words)
+    return error_bignum_sz;
+
+  uint32_t *rtop = r->v + r->words - 1;
+  uint32_t *atop = a->vtop;
+
+  for (uint32_t *vr = r->v, *va = a->v;
+       vr != rtop && va != atop;
+       vr++, va++)
+  {
+    *vr = *va;
+    r->vtop = vr;
+  }
+
+  bignum_canon(r);
+  return OK;
 }
 
 void bignum_setu(bignum *b, uint32_t l)
@@ -126,8 +169,14 @@ size_t bignum_len_bits(const bignum *b)
   while (v != b->v && *v == 0)
     v--;
 
-  size_t words = v - b->v;
-  return BYTES_TO_BITS(words * BIGNUM_BYTES) + topbit_index(*v);
+  size_t whole_words = v - b->v;
+  uint8_t extra_bits = topbit_index(*v);
+
+  /* Zero: we need 1 bit to represent this. */
+  if (extra_bits == 0 && whole_words == 0)
+    return 1;
+
+  return BYTES_TO_BITS(whole_words * BIGNUM_BYTES) + extra_bits;
 }
 
 size_t bignum_len_bytes(const bignum *b)
@@ -141,12 +190,32 @@ uint8_t bignum_get_byte(const bignum *b, size_t n)
 
   size_t word = n / BIGNUM_BYTES;
   size_t byte = n - word * BIGNUM_BYTES;
-  size_t word_count = (size_t) (b->vtop - b->v);
+  size_t word_count = (size_t) (b->vtop - b->v + 1);
 
   if (word > word_count)
     return 0;
 
   return (b->v[word] >> (byte * 8)) & 0xff;
+}
+
+error bignum_set_byte(bignum *b, uint8_t v, size_t n)
+{
+  assert(!bignum_check_mutable(b));
+
+  size_t word = n / BIGNUM_BYTES;
+  size_t byte = n - word * BIGNUM_BYTES;
+  size_t bit = byte * 8;
+  
+  if (word >= b->words)
+    return error_bignum_sz;
+
+  bignum_cleartop(b);
+  uint32_t ww = b->v[word];
+  ww &= ~(0xff << bit);
+  ww |= v << bit;
+  b->v[word] = ww;
+  bignum_canon(b);
+  return OK;
 }
 
 error bignum_add(bignum *r, const bignum *a, const bignum *b)
@@ -236,12 +305,12 @@ unsigned bignum_lte(const bignum *a, const bignum *b)
 
 unsigned bignum_gt(const bignum *a, const bignum *b)
 {
-  return bignum_lte(b, a);
+  return !bignum_lte(a, b);
 }
 
 unsigned bignum_gte(const bignum *a, const bignum *b)
 {
-  return bignum_lt(b, a);
+  return !bignum_lt(a, b);
 }
 
 unsigned bignum_eq(const bignum *a, const bignum *b)
@@ -253,8 +322,8 @@ unsigned bignum_eq(const bignum *a, const bignum *b)
     return 0;
 
   for (uint32_t *va = a->vtop, *vb = b->vtop;
-       va != a->v && vb != b->v;
-       va++, vb++)
+       va != a->v - 1 && vb != b->v - 1;
+       va--, vb--)
   {
     if (*va != *vb)
       return 0;
@@ -269,11 +338,50 @@ unsigned bignum_const_eq(const bignum *a, const bignum *b)
   neq |= (bignum_len_bits(a) ^ bignum_len_bits(b));
 
   for (uint32_t *va = a->vtop, *vb = b->vtop;
-       va != a->v && vb != b->v;
-       va++, vb++)
+       va != a->v - 1 && vb != b->v - 1;
+       va--, vb--)
   {
     neq |= (*va ^ *vb);
   }
   
   return !neq;
+}
+
+error bignum_mul(bignum *r, const bignum *a, const bignum *b)
+{
+  assert(!bignum_check_mutable(r));
+  assert(!bignum_check(a));
+  assert(!bignum_check(b));
+
+  size_t sza = bignum_len_bits(a);
+  size_t szb = bignum_len_bits(b);
+
+  /* Shortcuts? */
+
+  /* x * 0 -> 0 */
+  if ((sza == 1 && bignum_eq32(a, 0)) ||
+      (szb == 1 && bignum_eq32(b, 0)))
+  {
+    bignum_set(r, 0);
+    return OK;
+  }
+
+  /* 1 * b -> b */
+  if (sza == 1 && bignum_eq32(a, 1))
+    return bignum_dup(r, b);
+
+  /* a * 1 -> a */
+  if (szb == 1 && bignum_eq32(b, 1))
+    return bignum_dup(r, a);
+
+  printf("bignum_mul cap %zu a %zu b %zu\n",
+         (size_t) r->words * BIGNUM_BYTES * 8,
+         sza, szb);
+
+  if (r->words * BIGNUM_BYTES * 8 < sza + szb)
+    return error_bignum_sz;
+
+
+
+  return error_invalid_bignum;
 }
