@@ -56,6 +56,14 @@ typedef struct
 /** Pre-canned immutable bignums. */
 extern bignum bignum_0, bignum_1, bignum_neg1;
 
+/** Defines a bignum with identifier var, suitable for providing as a
+ *  temporary for functions which need it.
+ *
+ *  This uses quite a lot of stack, so consider doing it once per thread. */
+#define BIGNUM_TMP(var) \
+  uint32_t var ## _words[BIGNUM_MAX_WORDS] = { 0 }; \
+  bignum var = { var ## _words, var ## _words, BIGNUM_MAX_WORDS, 0 }
+
 /** Sanity check b.
  *
  * Returns an error if the bignum is internally consistent, OK otherwise.
@@ -175,15 +183,22 @@ static inline error bignum_subl(bignum *a, const bignum *b)
 
 /** r = a * b.
  *
- * Any of r, a and b can alias. */
+ * r MUST NOT alias a or b. */
 error bignum_mul(bignum *r, const bignum *a, const bignum *b);
 
-/** a *= b;
+/** r = a * b.
  *
- * a and b can alias. */
-static inline error bignum_mull(bignum *a, const bignum *b)
-{
-  return bignum_mul(a, a, b);
-}
+ * r may alias a or b.  tmp must not alias anything else. */
+error bignum_mult(bignum *tmp, bignum *r, const bignum *a, const bignum *b);
+
+/** r = a * w.
+ *
+ * r MUST NOT alias a. */
+error bignum_mulw(bignum *r, const bignum *a, uint32_t w);
+
+/** r = a * w.
+ *
+ * r may alias a.  tmp must not alias anything else. */
+error bignum_multw(bignum *tmp, bignum *r, const bignum *a, uint32_t w);
 
 #endif

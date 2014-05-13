@@ -4,11 +4,17 @@
 #include <stdio.h>
 
 #include "bignum.h"
+#include "bigmath.h"
 
 static uint32_t zero = 0, one = 1;
 bignum bignum_0 = { &zero, &zero, 1, BIGNUM_F_IMMUTABLE };
 bignum bignum_1 = { &one, &one, 1, BIGNUM_F_IMMUTABLE };
 bignum bignum_neg1 = { &one, &one, 1, BIGNUM_F_IMMUTABLE | BIGNUM_F_NEG };
+
+size_t bignum_words_used(const bignum *b)
+{
+  return b->vtop - b->v + 1;
+}
 
 error bignum_check(const bignum *b)
 {
@@ -16,9 +22,9 @@ error bignum_check(const bignum *b)
   if (b->v == NULL ||
       b->vtop == NULL ||
       b->v > b->vtop ||
-      b->vtop - b->v >= b->words ||
+      bignum_words_used(b) > b->words ||
       b->words == 0 ||
-      b->words >= BIGNUM_MAX_WORDS ||
+      b->words > BIGNUM_MAX_WORDS ||
       (b->flags & ~BIGNUM_F__ALL))
     return error_invalid_bignum;
   return OK;
@@ -52,7 +58,7 @@ void bignum_cleartop(bignum *b)
 void bignum_canon(bignum *b)
 {
   assert(!bignum_check_mutable(b));
-  while (b->vtop != b->v && *b->vtop != 0)
+  while (b->vtop != b->v && *b->vtop == 0)
     b->vtop--;
   
   if (b->vtop == b->v && *b->v == 0)
@@ -79,7 +85,7 @@ error bignum_dup(bignum *r, const bignum *a)
   uint32_t *atop = a->vtop;
 
   for (uint32_t *vr = r->v, *va = a->v;
-       vr != rtop && va != atop;
+       vr <= rtop && va <= atop;
        vr++, va++)
   {
     *vr = *va;
@@ -190,7 +196,7 @@ uint8_t bignum_get_byte(const bignum *b, size_t n)
 
   size_t word = n / BIGNUM_BYTES;
   size_t byte = n - word * BIGNUM_BYTES;
-  size_t word_count = (size_t) (b->vtop - b->v + 1);
+  size_t word_count = bignum_words_used(b);
 
   if (word > word_count)
     return 0;
@@ -289,7 +295,7 @@ unsigned bignum_lt(const bignum *a, const bignum *b)
   /* Now run through word values. */
   for (uint32_t *va = a->vtop, *vb = b->vtop;
        va != a->v && vb != b->v;
-       va++, vb++)
+       va--, vb--)
   {
     if (*va < *vb)
       return 1;
@@ -347,6 +353,11 @@ unsigned bignum_const_eq(const bignum *a, const bignum *b)
   return !neq;
 }
 
+size_t bignum_cap_bits(const bignum *b)
+{
+  return b->words * BIGNUM_BYTES * 8;
+}
+
 error bignum_mul(bignum *r, const bignum *a, const bignum *b)
 {
   assert(!bignum_check_mutable(r));
@@ -374,14 +385,90 @@ error bignum_mul(bignum *r, const bignum *a, const bignum *b)
   if (szb == 1 && bignum_eq32(b, 1))
     return bignum_dup(r, a);
 
-  printf("bignum_mul cap %zu a %zu b %zu\n",
-         (size_t) r->words * BIGNUM_BYTES * 8,
-         sza, szb);
-
-  if (r->words * BIGNUM_BYTES * 8 < sza + szb)
+  if (bignum_cap_bits(r) < sza + szb)
     return error_bignum_sz;
 
+  /* Ensure a <= b. */
+  if (sza > szb)
+  {
+    const bignum *tmp = b;
+    b = a;
+    a = tmp;
 
+    size_t sztmp = szb;
+    szb = sza;
+    sza = sztmp;
+  }
 
-  return error_invalid_bignum;
+  /* We cannot alias. */
+  assert(r != a && r != b);
+
+  bignum_set(r, 0);
+  bignum_cleartop(r);
+
+  size_t nb = bignum_words_used(b);
+  for (uint32_t *wr = r->v, *wa = a->v, *wb = b->v;
+       wa <= a->vtop;
+       wa++, wr++)
+  {
+    bigmath_mul_accum(wr, wb, nb, *wa);
+  }
+
+  bignum_canon(r);
+  return OK;
+}
+
+error bignum_mulw(bignum *r, const bignum *a, uint32_t b)
+{
+  if (b == 0)
+  {
+    bignum_set(r, 0);
+    return OK;
+  } else if (b == 1) {
+    return bignum_dup(r, a);
+  }
+
+  assert(!bignum_check_mutable(r));
+  assert(!bignum_check(a));
+  assert(r != a);
+
+  uint8_t sza = bignum_len_bits(a);
+  uint8_t szb = topbit_index(b);
+
+  if (bignum_cap_bits(r) < sza + szb)
+    return error_bignum_sz;
+
+  size_t words = bignum_words_used(a);
+  
+  bignum_set(r, 0);
+  bignum_cleartop(r);
+  bigmath_mul_accum(r->v, a->v, words, b);
+  bignum_canon(r);
+  return OK;
+}
+
+error bignum_mult(bignum *tmp, bignum *r, const bignum *a, const bignum *b)
+{
+  if (r == a || r == b)
+  {
+    error err = bignum_mul(tmp, a, b);
+    if (err)
+      return err;
+    return bignum_dup(r, tmp);
+  }
+
+  return bignum_mul(r, a, b);
+}
+
+error bignum_multw(bignum *tmp, bignum *r, const bignum *a, uint32_t w)
+{
+  if (r == a)
+  {
+    error err = bignum_mulw(tmp, a, w);
+    if (err)
+      return err;
+    return bignum_dup(r, tmp);
+  }
+
+  return bignum_mulw(r, a, w);
 }

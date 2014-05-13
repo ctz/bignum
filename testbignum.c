@@ -20,6 +20,8 @@ static bignum bignum_alloc(void)
 
 static void bignum_free(bignum *b)
 {
+  if (!b)
+    return;
   assert(bignum_check(b) == OK);
   free(b->v);
   memset(b, 0, sizeof *b);
@@ -27,7 +29,7 @@ static void bignum_free(bignum *b)
 
 static void print(const char *label, const bignum *b)
 {
-  char buf[256];
+  char buf[1024];
   error e = bignum_fmt_hex(b, buf, sizeof buf);
   assert(e == OK);
   printf("%s = %s\n", label, buf);
@@ -69,6 +71,7 @@ void basic_test(void)
   printf("ok\n");
 }
 
+/* --- Equalities --- */
 typedef unsigned (*eqfn)(const bignum *a, const bignum *b);
 
 static unsigned both_eq(const bignum *a, const bignum *b)
@@ -97,6 +100,43 @@ static const eq equalities[] = {
   { ">=", bignum_gte },
   { "<", bignum_lt },
   { ">", bignum_gt },
+  { NULL }
+};
+
+/* --- Functions --- */
+typedef void (*evalfn)(bignum *r, const bignum *a, const bignum *b, const bignum *c);
+
+static void eval_mul(bignum *r, const bignum *arg1, const bignum *arg2, const bignum *arg3)
+{
+  assert(arg1 != NULL && arg2 != NULL && arg3 == NULL);
+  print("arg1", arg1);
+  print("arg2", arg2);
+  error err = bignum_mul(r, arg1, arg2);
+  print("result", r);
+  assert(err == OK);
+}
+
+static void eval_add(bignum *r, const bignum *arg1, const bignum *arg2, const bignum *arg3)
+{
+  error err;
+  err = bignum_add(r, arg1, arg2);
+  assert(err == OK);
+  if (arg3)
+  {
+    err = bignum_addl(r, arg3);
+    assert(err == OK);
+  }
+}
+
+typedef struct
+{
+  const char *str;
+  evalfn fn;
+} eval;
+
+static const eval evaluators[] = {
+  { "mul", eval_mul },
+  { "add", eval_add },
   { NULL }
 };
 
@@ -135,8 +175,72 @@ static void split_eq(const char *expr,
     }
   }
 
-  TEST_CHECK_(0, "Expression '%s' does not contain operator", expr);
+  TEST_CHECK_(0, "Expression '%s' does not contain equality operator", expr);
   abort();
+}
+
+static void convert_bignum(bignum *num, const char *str, size_t len)
+{
+  error err = bignum_parse_strl(num, str, len);
+  assert(err == OK);
+}
+
+static void convert_eval_params(const char *str, const char *end,
+                                bignum *arg0, bignum *arg1, bignum *arg2)
+{
+  const char *ptr = str;
+  const char *start = str;
+  size_t arg = 0;
+  bignum *args[3] = { arg0, arg1, arg2 };
+
+#define PROCESS_ARG                                 \
+  {                                                 \
+    const char *end = ptr;                          \
+    trim(&start, &end);                             \
+    *(args[arg]) = bignum_alloc();                  \
+    convert_bignum(args[arg], start, end - start);  \
+    arg++;                                          \
+    assert(arg < 3);                                \
+  }
+
+  while (ptr != end)
+  {
+    if (*ptr == ',')
+    {
+      PROCESS_ARG;
+      start = ptr + 1;
+    }
+
+    ptr++;
+  }
+
+  PROCESS_ARG;
+}
+
+static void convert_arg(bignum *num, const char *str, size_t len)
+{
+  for (const eval *e = evaluators;
+       e->str;
+       e++)
+  {
+    if (strstr(str, e->str) == str)
+    {
+      bignum arg0, arg1, arg2;
+      arg0.v = arg1.v = arg2.v = NULL;
+      convert_eval_params(str + strlen(e->str) + 1, str + len - 1,
+                          &arg0, &arg1, &arg2);
+      e->fn(num,
+            arg0.v ? &arg0 : NULL,
+            arg1.v ? &arg1 : NULL,
+            arg2.v ? &arg2 : NULL);
+      if (arg0.v) bignum_free(&arg0);
+      if (arg1.v) bignum_free(&arg1);
+      if (arg2.v) bignum_free(&arg2);
+      return;
+    }
+  }
+
+  convert_bignum(num, str, len);
 }
 
 static void check(const char *expr)
@@ -144,14 +248,13 @@ static void check(const char *expr)
   const char *left, *right;
   const char *endleft, *endright;
   const eq *equality;
-  error err;
   split_eq(expr, &left, &endleft, &right, &endright, &equality);
 
+  printf("expression %s\n", expr);
+
   bignum a = bignum_alloc(), b = bignum_alloc();
-  err = bignum_parse_strl(&a, left, endleft - left);
-  assert(err == OK);
-  err = bignum_parse_strl(&b, right, endright - right);
-  assert(err == OK);
+  convert_arg(&a, left, endleft - left);
+  convert_arg(&b, right, endright - right);
   TEST_CHECK_(equality->fn(&a, &b) == 1, "Expression '%s' is not true", expr);
   print("a", &a);
   print("b", &b);
@@ -176,8 +279,20 @@ static void inequality(void)
   check("1234567890123456789 > 1234567890123456788");
 }
 
+static void test_add(void)
+{
+#include "test-add.inc"
+}
+
+static void test_mul(void)
+{
+#include "test-mul.inc"
+}
+
 TEST_LIST = {
   { "basic_test", basic_test },
   { "inequality", inequality },
+  { "add", test_add },
+  { "mul", test_mul },
   { 0 }
 };

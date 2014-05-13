@@ -5,6 +5,7 @@
 
 #include <assert.h>
 #include <string.h>
+#include <stdio.h>
 
 static const char *hex_chars = "0123456789abcdef";
 
@@ -118,11 +119,9 @@ static error parse_hex(bignum *r, sstr *s)
 
 error parse_dec(bignum *r, sstr *s)
 {
-  uint32_t ten = 10;
-  bignum bignum_ten = { &ten, &ten, 1, BIGNUM_F_IMMUTABLE };
-
   uint32_t digit = 0;
   bignum bignum_dig = { &digit, &digit, 1, BIGNUM_F_IMMUTABLE };
+  BIGNUM_TMP(bignum_tmp);
 
   bignum_set(r, 0);
 
@@ -136,7 +135,7 @@ error parse_dec(bignum *r, sstr *s)
     else
       return error_invalid_string;
 
-    if ((err = bignum_mull(r, &bignum_ten)))
+    if ((err = bignum_multw(&bignum_tmp, r, r, 10)))
       return err;
     if ((err = bignum_addl(r, &bignum_dig)))
       return err;
