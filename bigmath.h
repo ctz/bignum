@@ -17,4 +17,10 @@
  *  r and a have w words. */
 void bigmath_mul_accum(uint32_t *r, uint32_t *a, size_t words, uint32_t m);
 
+/** Returns the index of the top set bit of w.
+ *
+ *  Returns 0 if w is 0, 32 if w is 0xffffffff, 1 if w is 1,
+ *  2 if w is 3, etc. */
+uint8_t bigmath_uint32_fls(uint32_t w);
+
 #endif

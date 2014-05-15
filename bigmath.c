@@ -34,7 +34,14 @@ void bigmath_mul_accum(uint32_t *r, uint32_t *a, size_t w, uint32_t m)
   for (size_t i = 0; i < w; i++, r++, a++)
   {
     uint64_t mm = (uint64_t) *a * m;
-    //printf("mul-accum: %" PRIx32 " * %" PRIx32 " = %" PRIx64 "\n", *a, m, mm);
     bigmath_add_uint64(r, mm);
   }
+}
+
+uint8_t bigmath_uint32_fls(uint32_t v)
+{
+  if (v)
+    return 32 - __builtin_clz(v);
+  else
+    return 0;
 }

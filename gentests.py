@@ -3,6 +3,8 @@ import operator
 
 TESTS = 16
 
+SIGNS = ((1, 1), (-1, 1), (1, -1), (-1, -1))
+
 def gen_random(name, op):
     def gen(f, sz, signa = 1, signb = 1):
         for _ in range(TESTS):
@@ -12,7 +14,7 @@ def gen_random(name, op):
 
     filename = 'test-%s.inc' % name
     with open(filename, 'w') as f:
-        for signa, signb in ((1, 1), (-1, 1), (1, -1), (-1, -1)):
+        for signa, signb in SIGNS:
             gen(f, 16, signa, signb)
             gen(f, 32, signa, signb)
             gen(f, 64, signa, signb)

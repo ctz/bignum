@@ -72,6 +72,9 @@ extern bignum bignum_0, bignum_1, bignum_neg1;
  */
 error bignum_check(const bignum *b);
 
+/** Sanity check b, and fail an assert if it is immutable. */
+error bignum_check_mutable(const bignum *b);
+
 /** Canonicalise b.  Fails assert if b is immutable.
  *
  * Canonicalisation involves, for example:
@@ -79,6 +82,14 @@ error bignum_check(const bignum *b);
  * - Adjust vtop down if it points to zero words.
  */
 void bignum_canon(bignum *b);
+
+/** Moves vtop right to the top of storage, zeroing
+ *  as it goes.
+ *
+ *  Use this to prepare a bignum for arbitrary writes
+ *  to storage, then use bignum_canon afterwards to
+ *  adjust vtop back down. */
+void bignum_cleartop(bignum *b);
 
 /** Zeroes all digits, and leave structure b invalid. */
 void bignum_clear(bignum *b);
@@ -94,6 +105,13 @@ size_t bignum_len_bits(const bignum *b);
 /** Returns the number of bytes needed to store the magnitude of b
  *  in binary. */
 size_t bignum_len_bytes(const bignum *b);
+
+/** Returns the number of words needed to store the magnitude of b. */
+size_t bignum_len_words(const bignum *b);
+
+/** Returns the number of bits b is able to store (irrespective
+ *  of its current magnitude). */
+size_t bignum_capacity_bits(const bignum *b);
 
 /** Returns the value of the nth byte in the bignum.
  *
@@ -139,6 +157,9 @@ static inline unsigned bignum_is_negative(const bignum *b)
 
 /** Returns 1 if a == b, 0 otherwise. */
 unsigned bignum_eq(const bignum *a, const bignum *b);
+
+/** Returns 1 if a == b, 0 otherwise. */
+unsigned bignum_eq32(const bignum *a, int32_t b);
 
 /** Returns 1 if a == b, 0 otherwise.  In constant time. */
 unsigned bignum_const_eq(const bignum *a, const bignum *b);
