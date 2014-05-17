@@ -156,7 +156,7 @@ test_check__(int cond, const char* file, int line, const char* cond_str, const c
 {
     const char *result_str;
     int verbose_level;
-    char buffer[128] = "";
+    char buffer[512] = "";
 
     if(cond) {
         result_str = "passed";
