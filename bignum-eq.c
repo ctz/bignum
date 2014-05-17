@@ -4,7 +4,6 @@
 #include <stdio.h>
 
 #include "bignum.h"
-#include "bigmath.h"
 
 unsigned bignum_lt(const bignum *a, const bignum *b)
 {

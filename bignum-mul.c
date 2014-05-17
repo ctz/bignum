@@ -4,7 +4,8 @@
 #include <stdio.h>
 
 #include "bignum.h"
-#include "bigmath.h"
+#include "bignum-math.h"
+#include "handy.h"
 
 error bignum_mul(bignum *r, const bignum *a, const bignum *b)
 {
@@ -39,13 +40,8 @@ error bignum_mul(bignum *r, const bignum *a, const bignum *b)
   /* Ensure a <= b. */
   if (sza > szb)
   {
-    const bignum *tmp = b;
-    b = a;
-    a = tmp;
-
-    size_t sztmp = szb;
-    szb = sza;
-    sza = sztmp;
+    SWAP(a, b);
+    SWAP(sza, szb);
   }
 
   /* We cannot alias. */
@@ -59,7 +55,7 @@ error bignum_mul(bignum *r, const bignum *a, const bignum *b)
        wa <= a->vtop;
        wa++, wr++)
   {
-    bigmath_mul_accum(wr, wb, nb, *wa);
+    bignum_math_mul_accum(wr, wb, nb, *wa);
   }
 
   unsigned nega = bignum_is_negative(a),
@@ -86,7 +82,7 @@ error bignum_mulw(bignum *r, const bignum *a, uint32_t b)
   assert(r != a);
 
   uint8_t sza = bignum_len_bits(a);
-  uint8_t szb = bigmath_uint32_fls(b);
+  uint8_t szb = bignum_math_uint32_fls(b);
 
   if (bignum_capacity_bits(r) < sza + szb)
     return error_bignum_sz;
@@ -95,7 +91,7 @@ error bignum_mulw(bignum *r, const bignum *a, uint32_t b)
   
   bignum_set(r, 0);
   bignum_cleartop(r, words + 1);
-  bigmath_mul_accum(r->v, a->v, words, b);
+  bignum_math_mul_accum(r->v, a->v, words, b);
   bignum_canon(r);
   return OK;
 }

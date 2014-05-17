@@ -4,7 +4,8 @@
 #include <stdio.h>
 
 #include "bignum.h"
-#include "bigmath.h"
+#include "bignum-math.h"
+#include "handy.h"
 
 static uint32_t zero = 0, one = 1;
 bignum bignum_0 = { &zero, &zero, 1, BIGNUM_F_IMMUTABLE };
@@ -32,13 +33,11 @@ error bignum_check_mutable(const bignum *b)
   return e;
 }
 
-#define min(a, b) (((a) < (b)) ? (a) : (b))
-
 void bignum_cleartop(bignum *b, size_t words)
 {
   assert(!bignum_check_mutable(b));
   assert(words != 0);
-  uint32_t *newtop = b->v + min(b->words, words) - 1;
+  uint32_t *newtop = b->v + MIN(b->words, words) - 1;
 
   while (b->vtop != newtop)
   {
@@ -53,7 +52,7 @@ void bignum_canon(bignum *b)
   while (b->vtop != b->v && *b->vtop == 0)
     b->vtop--;
   
-  if (b->vtop == b->v && *b->v == 0)
+  if (bignum_is_zero(b))
     b->flags &= ~BIGNUM_F_NEG;
 }
 
@@ -140,9 +139,14 @@ unsigned bignum_eq32(const bignum *b, int32_t v)
     return 0;
 }
 
+unsigned bignum_is_zero(const bignum *b)
+{
+  return bignum_eq32(b, 0);
+}
+
 int bignum_sign(const bignum *b)
 {
-  if (bignum_eq32(b, 0))
+  if (bignum_is_zero(b))
     return 1;
   else if (b->flags & BIGNUM_F_NEG)
     return -1;
@@ -158,7 +162,7 @@ size_t bignum_len_bits(const bignum *b)
     v--;
 
   size_t whole_words = v - b->v;
-  uint8_t extra_bits = bigmath_uint32_fls(*v);
+  uint8_t extra_bits = bignum_math_uint32_fls(*v);
 
   /* Zero: we need 1 bit to represent this. */
   if (extra_bits == 0 && whole_words == 0)

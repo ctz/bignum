@@ -4,7 +4,7 @@
 #include <stdio.h>
 
 #include "bignum.h"
-#include "bigmath.h"
+#include "handy.h"
 
 error bignum_add(bignum *r, const bignum *a, const bignum *b)
 {
@@ -29,9 +29,7 @@ error bignum_add(bignum *r, const bignum *a, const bignum *b)
     if (nega)
     {
       /* Convert -a + b to b + -a. */
-      const bignum *tmp = a;
-      a = b;
-      b = tmp;
+      SWAP(a, b);
     }
 
     return bignum_sub_unsigned(r, a, b);

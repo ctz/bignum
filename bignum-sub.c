@@ -4,7 +4,7 @@
 #include <stdio.h>
 
 #include "bignum.h"
-#include "bigmath.h"
+#include "handy.h"
 
 /* This is r = a - b. */
 error bignum_sub(bignum *r, const bignum *a, const bignum *b)
@@ -48,10 +48,7 @@ error bignum_sub_unsigned(bignum *r, const bignum *a, const bignum *b)
 {
   if (lt_unsigned(a, b))
   {
-    const bignum *tmp = a;
-    a = b;
-    b = tmp;
-
+    SWAP(a, b);
     r->flags |= BIGNUM_F_NEG;
   }
 

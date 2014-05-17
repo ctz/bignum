@@ -137,6 +137,27 @@ static void eval_sub(bignum *r, const bignum *arg1, const bignum *arg2, const bi
   }
 }
 
+static void eval_sqr(bignum *r, const bignum *arg1, const bignum *arg2, const bignum *arg3)
+{
+  assert(arg1 && !arg2 && !arg3);
+  error err = bignum_sqr(r, arg1);
+  assert(err == OK);
+}
+
+static void eval_mod(bignum *r, const bignum *arg1, const bignum *arg2, const bignum *arg3)
+{
+  assert(arg1 && arg2 && !arg3);
+  error err = bignum_mod(r, arg1, arg2);
+  assert(err == OK);
+}
+
+static void eval_div(bignum *r, const bignum *arg1, const bignum *arg2, const bignum *arg3)
+{
+  assert(arg1 && arg2 && !arg3);
+  error err = bignum_div(r, arg1, arg2);
+  assert(err == OK);
+}
+
 typedef struct
 {
   const char *str;
@@ -147,6 +168,9 @@ static const eval evaluators[] = {
   { "mul", eval_mul },
   { "add", eval_add },
   { "sub", eval_sub },
+  { "sqr", eval_sqr },
+  { "mod", eval_mod },
+  { "div", eval_div },
   { NULL }
 };
 
@@ -301,11 +325,29 @@ static void test_sub(void)
 #include "test-sub.inc"
 }
 
+static void test_sqr(void)
+{
+#include "test-sqr.inc"
+}
+
+static void test_mod(void)
+{
+#include "test-mod.inc"
+}
+
+static void test_div(void)
+{
+#include "test-div.inc"
+}
+
 TEST_LIST = {
   { "basic_test", basic_test },
   { "inequality", inequality },
   { "add", test_add },
   { "sub", test_sub },
   { "mul", test_mul },
+  { "sqr", test_sqr },
+  { "div", test_div },
+  { "mod", test_mod },
   { 0 }
 };

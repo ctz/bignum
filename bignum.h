@@ -10,7 +10,8 @@ typedef enum
   error_invalid_bignum,
   error_buffer_sz,
   error_bignum_sz,
-  error_invalid_string
+  error_invalid_string,
+  error_div_zero
 } error;
 
 #define BIGNUM_BYTES 4
@@ -154,6 +155,9 @@ static inline unsigned bignum_is_negative(const bignum *b)
   return bignum_sign(b) == -1;
 }
 
+/** Returns 1 if b is zero, 0 otherwise. */
+unsigned bignum_is_zero(const bignum *b);
+
 /** Returns 1 if a == b, 0 otherwise. */
 unsigned bignum_eq(const bignum *a, const bignum *b);
 
@@ -230,5 +234,31 @@ error bignum_mulw(bignum *r, const bignum *a, uint32_t w);
  *
  * r may alias a.  tmp must not alias anything else. */
 error bignum_multw(bignum *tmp, bignum *r, const bignum *a, uint32_t w);
+
+/** r = a ^ 2. */
+error bignum_sqr(bignum *r, const bignum *a);
+
+/** r = a / b.
+ *
+ * r MUST NOT alias a or b.
+ * if b is zero, error_div_zero is returned.
+ */
+error bignum_div(bignum *r, const bignum *a, const bignum *b);
+
+/** r = a mod b.
+ *
+ *  r may not alias a or b.
+ *  if b is zero, error_div_zero is returned.
+ */
+error bignum_mod(bignum *r, const bignum *a, const bignum *b);
+
+/** q = a / b
+ *  r = a mod b
+ *
+ *  q may not alias r, a or b.
+ *  r may not alias q, a or b.
+ *  if b is zero, error_div_zero is returned.
+ */
+error bignum_divmod(bignum *q, bignum *r, const bignum *a, const bignum *b);
 
 #endif

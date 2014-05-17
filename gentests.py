@@ -30,12 +30,29 @@ def random_carry(sz):
             a ^= ((a >> shift) & 0xffffffff) << shift
     return a
 
-def gen_tests(name, op):
-    def gen(f, sz, candidate, signa = 1, signb = 1):
+def gen_tests(name, nargs, op, reject = lambda *x: False):
+    def gen2(f, sz, candidate, signa = 1, signb = 1):
         for _ in range(TESTS):
-            a = candidate(sz) * signa
-            b = candidate(sz) * signb
+            first = True
+            a = b = 1
+            while first or reject(a, b):
+                a = candidate(sz) * signa
+                b = candidate(sz) * signb
+                first = False
+
             print >>f, 'check("%s(%d, %d) == %d");' % (name, a, b, op(a, b))
+    
+    def gen1(f, sz, candidate, signa = 1, signb = 1):
+        for _ in range(TESTS):
+            first = True
+            a = 1
+            while first or reject(a):
+                a = candidate(sz) * signa
+                first = False
+
+            print >>f, 'check("%s(%d) == %d");' % (name, a, op(a))
+
+    gen = gen1 if nargs == 1 else gen2
 
     filename = 'test-%s.inc' % name
     with open(filename, 'w') as f:
@@ -45,7 +62,9 @@ def gen_tests(name, op):
                     gen(f, sz, can, signa, signb)
     print filename, 'written.'
 
-gen_tests('mul', operator.mul)
-gen_tests('add', operator.add)
-gen_tests('sub', operator.sub)
-
+gen_tests('mul', 2, operator.mul)
+gen_tests('add', 2, operator.add)
+gen_tests('sub', 2, operator.sub)
+gen_tests('sqr', 1, lambda x: operator.pow(x, 2))
+gen_tests('mod', 2, operator.mod, reject = lambda p, d: d == 0)
+gen_tests('div', 2, operator.div, reject = lambda p, d: d == 0)
