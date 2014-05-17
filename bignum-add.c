@@ -8,9 +8,6 @@
 
 error bignum_add(bignum *r, const bignum *a, const bignum *b)
 {
-  uint32_t *atop = a->vtop;
-  uint32_t *btop = b->vtop;
-
   assert(!bignum_check_mutable(r));
 
   /* Sort out signs:
@@ -37,11 +34,21 @@ error bignum_add(bignum *r, const bignum *a, const bignum *b)
       b = tmp;
     }
 
-    //TODO return bignum_sub(r, a, b);
+    return bignum_sub_unsigned(r, a, b);
   } else {
     /* a + b case. */
     r->flags &= ~BIGNUM_F_NEG;
   }
+
+  return bignum_add_unsigned(r, a, b);
+}
+
+error bignum_add_unsigned(bignum *r, const bignum *a, const bignum *b)
+{
+  assert(!bignum_check_mutable(r));
+
+  uint32_t *atop = a->vtop;
+  uint32_t *btop = b->vtop;
 
   for (uint32_t *rv = r->v, *av = a->v, *bv = b->v, carry = 0;
        ;
@@ -78,5 +85,6 @@ error bignum_add(bignum *r, const bignum *a, const bignum *b)
     *rv = rw;
   }
 
+  bignum_canon(r);
   return OK;
 }

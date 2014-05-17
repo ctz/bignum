@@ -20,7 +20,7 @@ unsigned bignum_lt(const bignum *a, const bignum *b)
   /* Check sizes */
   size_t sza = bignum_len_bits(a);
   size_t szb = bignum_len_bits(b);
-
+  
   if (sza < szb)
     return 1;
   else if (sza > szb)
@@ -28,11 +28,14 @@ unsigned bignum_lt(const bignum *a, const bignum *b)
   
   /* Now run through word values. */
   for (uint32_t *va = a->vtop, *vb = b->vtop;
-       va != a->v && vb != b->v;
+       va >= a->v && vb >= b->v;
        va--, vb--)
   {
-    if (*va < *vb)
+    uint32_t wa = *va, wb = *vb;
+    if (wa < wb)
       return 1;
+    else if (wa > wb)
+      return 0;
   }
 
   return 0;
@@ -62,7 +65,7 @@ unsigned bignum_eq(const bignum *a, const bignum *b)
     return 0;
 
   for (uint32_t *va = a->vtop, *vb = b->vtop;
-       va != a->v - 1 && vb != b->v - 1;
+       va >= a->v && vb >= b->v;
        va--, vb--)
   {
     if (*va != *vb)
@@ -78,7 +81,7 @@ unsigned bignum_const_eq(const bignum *a, const bignum *b)
   neq |= (bignum_len_bits(a) ^ bignum_len_bits(b));
 
   for (uint32_t *va = a->vtop, *vb = b->vtop;
-       va != a->v - 1 && vb != b->v - 1;
+       va >= a->v && vb >= b->v;
        va--, vb--)
   {
     neq |= (*va ^ *vb);

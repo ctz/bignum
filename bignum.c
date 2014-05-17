@@ -32,10 +32,13 @@ error bignum_check_mutable(const bignum *b)
   return e;
 }
 
-void bignum_cleartop(bignum *b)
+#define min(a, b) (((a) < (b)) ? (a) : (b))
+
+void bignum_cleartop(bignum *b, size_t words)
 {
   assert(!bignum_check_mutable(b));
-  uint32_t *newtop = b->v + b->words - 1;
+  assert(words != 0);
+  uint32_t *newtop = b->v + min(b->words, words) - 1;
 
   while (b->vtop != newtop)
   {
@@ -203,7 +206,7 @@ error bignum_set_byte(bignum *b, uint8_t v, size_t n)
   if (word >= b->words)
     return error_bignum_sz;
 
-  bignum_cleartop(b);
+  bignum_cleartop(b, word + 1);
   uint32_t ww = b->v[word];
   ww &= ~(0xff << bit);
   ww |= v << bit;

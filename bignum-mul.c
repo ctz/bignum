@@ -52,7 +52,7 @@ error bignum_mul(bignum *r, const bignum *a, const bignum *b)
   assert(r != a && r != b);
 
   bignum_set(r, 0);
-  bignum_cleartop(r);
+  bignum_cleartop(r, (sza + szb + 31) / 32);
 
   size_t nb = bignum_len_words(b);
   for (uint32_t *wr = r->v, *wa = a->v, *wb = b->v;
@@ -61,6 +61,11 @@ error bignum_mul(bignum *r, const bignum *a, const bignum *b)
   {
     bigmath_mul_accum(wr, wb, nb, *wa);
   }
+
+  unsigned nega = bignum_is_negative(a),
+           negb = bignum_is_negative(b);
+  if (nega ^ negb)
+    r->flags |= BIGNUM_F_NEG;
 
   bignum_canon(r);
   return OK;
@@ -89,7 +94,7 @@ error bignum_mulw(bignum *r, const bignum *a, uint32_t b)
   size_t words = bignum_len_words(a);
   
   bignum_set(r, 0);
-  bignum_cleartop(r);
+  bignum_cleartop(r, words + 1);
   bigmath_mul_accum(r->v, a->v, words, b);
   bignum_canon(r);
   return OK;

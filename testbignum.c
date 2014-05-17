@@ -10,7 +10,7 @@
 
 static bignum bignum_alloc(void)
 {
-  size_t words = 64;
+  size_t words = 256;
   size_t bytes = words * BIGNUM_BYTES;
   uint32_t *v = malloc(bytes);
   assert(v);
@@ -29,7 +29,7 @@ static void bignum_free(bignum *b)
 
 static void print(const char *label, const bignum *b)
 {
-  char buf[1024];
+  char buf[4096];
   error e = bignum_fmt_hex(b, buf, sizeof buf);
   assert(e == OK);
   printf("%s = %s\n", label, buf);
@@ -109,10 +109,7 @@ typedef void (*evalfn)(bignum *r, const bignum *a, const bignum *b, const bignum
 static void eval_mul(bignum *r, const bignum *arg1, const bignum *arg2, const bignum *arg3)
 {
   assert(arg1 != NULL && arg2 != NULL && arg3 == NULL);
-  print("arg1", arg1);
-  print("arg2", arg2);
   error err = bignum_mul(r, arg1, arg2);
-  print("result", r);
   assert(err == OK);
 }
 
@@ -128,6 +125,18 @@ static void eval_add(bignum *r, const bignum *arg1, const bignum *arg2, const bi
   }
 }
 
+static void eval_sub(bignum *r, const bignum *arg1, const bignum *arg2, const bignum *arg3)
+{
+  error err;
+  err = bignum_sub(r, arg1, arg2);
+  assert(err == OK);
+  if (arg3)
+  {
+    err = bignum_subl(r, arg3);
+    assert(err == OK);
+  }
+}
+
 typedef struct
 {
   const char *str;
@@ -137,6 +146,7 @@ typedef struct
 static const eval evaluators[] = {
   { "mul", eval_mul },
   { "add", eval_add },
+  { "sub", eval_sub },
   { NULL }
 };
 
@@ -256,9 +266,6 @@ static void check(const char *expr)
   convert_arg(&a, left, endleft - left);
   convert_arg(&b, right, endright - right);
   TEST_CHECK_(equality->fn(&a, &b) == 1, "Expression '%s' is not true", expr);
-  print("a", &a);
-  print("b", &b);
-  printf("%s -> %u\n", expr, equality->fn(&a, &b));
   bignum_free(&a);
   bignum_free(&b);
 
@@ -289,10 +296,16 @@ static void test_mul(void)
 #include "test-mul.inc"
 }
 
+static void test_sub(void)
+{
+#include "test-sub.inc"
+}
+
 TEST_LIST = {
   { "basic_test", basic_test },
   { "inequality", inequality },
   { "add", test_add },
+  { "sub", test_sub },
   { "mul", test_mul },
   { 0 }
 };

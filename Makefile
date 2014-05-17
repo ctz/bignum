@@ -8,3 +8,6 @@ testbignum: $(BIGNUM) testbignum.o
 
 clean:
 	rm -f *.o testbignum
+test: testbignum
+	./testbignum
+

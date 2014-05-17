@@ -6,81 +6,93 @@
 #include "bignum.h"
 #include "bigmath.h"
 
-#if 0
-error bignum_add(bignum *r, const bignum *a, const bignum *b)
+/* This is r = a - b. */
+error bignum_sub(bignum *r, const bignum *a, const bignum *b)
 {
-  uint32_t *atop = a->vtop;
-  uint32_t *btop = b->vtop;
-
   assert(!bignum_check_mutable(r));
 
-  /* Sort out signs:
-   *
-   *  a +  b ->   a + b
-   * -a +  b ->   b - a
-   *  a + -b ->   a - b
-   * -a + -b -> -(a + b)
+  /*  a -  b -> a - b
+   * -a -  b -> -(a + b)
+   *  a - -b -> a + b
+   * -a - -b -> b - a
    */
 
   unsigned nega = bignum_is_negative(a),
            negb = bignum_is_negative(b);
+
   if (nega && negb)
   {
-    /* -a + -b case. */
-    r->flags |= BIGNUM_F_NEG;
+    return bignum_sub_unsigned(r, b, a);
   } else if (nega ^ negb) {
-    /* -a + b and a + -b cases. */
+    error err = bignum_add_unsigned(r, a, b);
     if (nega)
-    {
-      /* Convert -a + b to b + -a. */
-      const bignum *tmp = a;
-      a = b;
-      b = tmp;
-    }
-
-    //TODO return bignum_sub(r, a, b);
+      r->flags |= BIGNUM_F_NEG;
+    return err;
   }
 
-  for (uint32_t *rv = r->v, *av = a->v, *bv = b->v, carry = 0;
+  return bignum_sub_unsigned(r, a, b);
+}
+
+static unsigned lt_unsigned(const bignum *a, const bignum *b)
+{
+  bignum ua = *a;
+  bignum ub = *b;
+
+  ua.flags &= ~BIGNUM_F_NEG;
+  ub.flags &= ~BIGNUM_F_NEG;
+
+  return bignum_lt(&ua, &ub);
+}
+
+error bignum_sub_unsigned(bignum *r, const bignum *a, const bignum *b)
+{
+  if (lt_unsigned(a, b))
+  {
+    const bignum *tmp = a;
+    a = b;
+    b = tmp;
+
+    r->flags |= BIGNUM_F_NEG;
+  }
+
+  uint32_t *atop = a->vtop,
+           *btop = b->vtop;
+
+  for (uint32_t *rv = r->v, *av = a->v, *bv = b->v, borrow = 0;
        ;
        r->vtop = rv, rv++)
   {
     uint8_t have_a = av <= atop;
     uint8_t have_b = bv <= btop;
 
-    if (!have_a && !have_b && !carry)
+    if (!have_a)
       break;
-
+    
     if (rv - r->v >= r->words)
       return error_bignum_sz;
 
-    uint32_t rw = carry;
-    carry = 0;
+    uint32_t rw = *av++;
 
-    if (have_a)
+    if (borrow)
     {
-      uint32_t aw = *av++;
-      rw += aw;
-      if (rw < aw)
-        carry = 1;
+      borrow = !rw;
+      rw--;
     }
 
     if (have_b)
     {
       uint32_t bw = *bv++;
-      rw += bw;
-      if (rw < bw)
-        carry = 1;
+
+      if (bw > rw)
+        borrow = 1;
+
+      rw -= bw;
     }
 
     *rv = rw;
   }
 
-  if (bignum_is_negative(a) && bignum_is_negative(b))
-    r->flags |= BIGNUM_F_NEG;
-  else
-    r->flags &= ~BIGNUM_F_NEG;
-
+  bignum_canon(r);
   return OK;
 }
-#endif
+

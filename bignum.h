@@ -83,13 +83,12 @@ error bignum_check_mutable(const bignum *b);
  */
 void bignum_canon(bignum *b);
 
-/** Moves vtop right to the top of storage, zeroing
- *  as it goes.
+/** Moves b->vtop to b->v + words, zeroing as it goes.
  *
  *  Use this to prepare a bignum for arbitrary writes
  *  to storage, then use bignum_canon afterwards to
  *  adjust vtop back down. */
-void bignum_cleartop(bignum *b);
+void bignum_cleartop(bignum *b, size_t words);
 
 /** Zeroes all digits, and leave structure b invalid. */
 void bignum_clear(bignum *b);
@@ -189,6 +188,11 @@ static inline error bignum_addl(bignum *a, const bignum *b)
   return bignum_add(a, a, b);
 }
 
+/** r = a + b, ignoring the sign of a and b.  Hence r is always positive.
+ *
+ * Any of r, a and b can alias. */
+error bignum_add_unsigned(bignum *r, const bignum *a, const bignum *b);
+
 /** r = a - b.
  *
  * Any of r, a and b can alias. */
@@ -201,6 +205,11 @@ static inline error bignum_subl(bignum *a, const bignum *b)
 {
   return bignum_sub(a, a, b);
 }
+
+/** r = a - b, ignoring sign of a and b.  r is positive if a >= b.
+ *
+ * Any of r, a and b can alias. */
+error bignum_sub_unsigned(bignum *r, const bignum *a, const bignum *b);
 
 /** r = a * b.
  *
