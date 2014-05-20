@@ -3,7 +3,7 @@ import operator
 import itertools
 import math
 
-TESTS = 8
+TESTS = 32
 
 SIGNS = ((1, 1), (-1, 1), (1, -1), (-1, -1))
 SIZES = (16, 32, 64, 128, 192, 512, 1024, 2048, )
@@ -71,3 +71,4 @@ gen_tests('sqr', 1, lambda x: operator.pow(x, 2))
 gen_tests('mod', 2, operator.mod, reject = lambda p, d: d == 0)
 gen_tests('div', 2, operator.div, reject = lambda p, d: d == 0)
 gen_tests('shl', 2, operator.ilshift, sizesb = range(1, 8))
+gen_tests('shr', 2, operator.irshift, sizesb = range(1, 10))

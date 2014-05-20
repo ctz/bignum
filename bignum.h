@@ -257,6 +257,11 @@ error bignum_multw(bignum *tmp, bignum *r, const bignum *a, uint32_t w);
  *  Fails with error_bignum_sz if the resulting value is too large. */
 error bignum_shl(bignum *r, size_t bits);
 
+/** Shifts r right by the given number of bits.
+ *
+ *  Does not fail. */
+error bignum_shr(bignum *r, size_t bits);
+
 /** r = a ^ 2. */
 error bignum_sqr(bignum *r, const bignum *a);
 
