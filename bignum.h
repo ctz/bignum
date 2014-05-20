@@ -88,8 +88,10 @@ void bignum_canon(bignum *b);
  *
  *  Use this to prepare a bignum for arbitrary writes
  *  to storage, then use bignum_canon afterwards to
- *  adjust vtop back down. */
-void bignum_cleartop(bignum *b, size_t words);
+ *  adjust vtop back down.
+ *
+ *  Fails if there isn't enough storage. */
+error bignum_cleartop(bignum *b, size_t words);
 
 /** Zeroes all digits, and leave structure b invalid. */
 void bignum_clear(bignum *b);
@@ -158,6 +160,9 @@ static inline unsigned bignum_is_negative(const bignum *b)
 /** Returns 1 if b is zero, 0 otherwise. */
 unsigned bignum_is_zero(const bignum *b);
 
+/** Returns 1 if abs(a) == abs(b), 0 otherwise. */
+unsigned bignum_mag_eq(const bignum *a, const bignum *b);
+
 /** Returns 1 if a == b, 0 otherwise. */
 unsigned bignum_eq(const bignum *a, const bignum *b);
 
@@ -166,6 +171,18 @@ unsigned bignum_eq32(const bignum *a, int32_t b);
 
 /** Returns 1 if a == b, 0 otherwise.  In constant time. */
 unsigned bignum_const_eq(const bignum *a, const bignum *b);
+
+/** Returns abs(a) < abs(b). */
+unsigned bignum_mag_lt(const bignum *a, const bignum *b);
+
+/** Returns abs(a) <= abs(b). */
+unsigned bignum_mag_lte(const bignum *a, const bignum *b);
+
+/** Returns abs(a) > abs(b). */
+unsigned bignum_mag_gt(const bignum *a, const bignum *b);
+
+/** Returns abs(a) >= abs(b). */
+unsigned bignum_mag_gte(const bignum *a, const bignum *b);
 
 /** Returns a < b. */
 unsigned bignum_lt(const bignum *a, const bignum *b);
@@ -234,6 +251,11 @@ error bignum_mulw(bignum *r, const bignum *a, uint32_t w);
  *
  * r may alias a.  tmp must not alias anything else. */
 error bignum_multw(bignum *tmp, bignum *r, const bignum *a, uint32_t w);
+
+/** Shifts r left by the given number of bits.
+ *
+ *  Fails with error_bignum_sz if the resulting value is too large. */
+error bignum_shl(bignum *r, size_t bits);
 
 /** r = a ^ 2. */
 error bignum_sqr(bignum *r, const bignum *a);

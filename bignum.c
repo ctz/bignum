@@ -33,17 +33,23 @@ error bignum_check_mutable(const bignum *b)
   return e;
 }
 
-void bignum_cleartop(bignum *b, size_t words)
+error bignum_cleartop(bignum *b, size_t words)
 {
   assert(!bignum_check_mutable(b));
   assert(words != 0);
-  uint32_t *newtop = b->v + MIN(b->words, words) - 1;
 
-  while (b->vtop != newtop)
-  {
-    *b->vtop = 0;
-    b->vtop++;
-  }
+  if (words == 0 || words >= b->words)
+    return error_bignum_sz;
+
+  uint32_t *newtop = b->v + words - 1;
+
+  for (uint32_t *ptr = b->vtop + 1;
+       ptr <= newtop;
+       ptr++)
+    *ptr = 0;
+  b->vtop = newtop;
+
+  return OK;
 }
 
 void bignum_canon(bignum *b)
@@ -207,10 +213,7 @@ error bignum_set_byte(bignum *b, uint8_t v, size_t n)
   size_t byte = n - word * BIGNUM_BYTES;
   size_t bit = byte * 8;
   
-  if (word >= b->words)
-    return error_bignum_sz;
-
-  bignum_cleartop(b, word + 1);
+  ER(bignum_cleartop(b, word + 1));
   uint32_t ww = b->v[word];
   ww &= ~(0xff << bit);
   ww |= v << bit;

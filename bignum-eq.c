@@ -16,6 +16,14 @@ unsigned bignum_lt(const bignum *a, const bignum *b)
   else if (bignum_sign(a) > bignum_sign(b))
     return 0;
 
+  return bignum_mag_lt(a, b);
+}
+
+unsigned bignum_mag_lt(const bignum *a, const bignum *b)
+{
+  assert(!bignum_check(a));
+  assert(!bignum_check(b));
+
   /* Check sizes */
   size_t sza = bignum_len_bits(a);
   size_t szb = bignum_len_bits(b);
@@ -55,11 +63,33 @@ unsigned bignum_gte(const bignum *a, const bignum *b)
   return !bignum_lt(a, b);
 }
 
+unsigned bignum_mag_lte(const bignum *a, const bignum *b)
+{
+  return bignum_mag_lt(a, b) || bignum_mag_eq(a, b);
+}
+
+unsigned bignum_mag_gt(const bignum *a, const bignum *b)
+{
+  return !bignum_mag_lte(a, b);
+}
+
+unsigned bignum_mag_gte(const bignum *a, const bignum *b)
+{
+  return !bignum_mag_lt(a, b);
+}
+
+
+/* --- Equality --- */
 unsigned bignum_eq(const bignum *a, const bignum *b)
 {
   if (bignum_sign(a) != bignum_sign(b))
     return 0;
 
+  return bignum_mag_eq(a, b);
+}
+
+unsigned bignum_mag_eq(const bignum *a, const bignum *b)
+{
   if (bignum_len_bits(a) != bignum_len_bits(b))
     return 0;
 

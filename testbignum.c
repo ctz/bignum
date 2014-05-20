@@ -158,6 +158,16 @@ static void eval_div(bignum *r, const bignum *arg1, const bignum *arg2, const bi
   assert(err == OK);
 }
 
+static void eval_shl(bignum *r, const bignum *arg1, const bignum *arg2, const bignum *arg3)
+{
+  assert(arg1 && arg2 && !arg3);
+  assert(bignum_len_words(arg2) == 1 && !bignum_is_negative(arg2));
+  error err = bignum_dup(r, arg1);
+  assert(err == OK);
+  err = bignum_shl(r, (size_t) *arg2->vtop);
+  assert(err == OK);
+}
+
 typedef struct
 {
   const char *str;
@@ -171,6 +181,7 @@ static const eval evaluators[] = {
   { "sqr", eval_sqr },
   { "mod", eval_mod },
   { "div", eval_div },
+  { "shl", eval_shl },
   { NULL }
 };
 
@@ -284,8 +295,6 @@ static void check(const char *expr)
   const eq *equality;
   split_eq(expr, &left, &endleft, &right, &endright, &equality);
 
-  printf("expression %s\n", expr);
-
   bignum a = bignum_alloc(), b = bignum_alloc();
   convert_arg(&a, left, endleft - left);
   convert_arg(&b, right, endright - right);
@@ -340,6 +349,11 @@ static void test_div(void)
 #include "test-div.inc"
 }
 
+static void test_shl(void)
+{
+#include "test-shl.inc"
+}
+
 TEST_LIST = {
   { "basic_test", basic_test },
   { "inequality", inequality },
@@ -349,5 +363,6 @@ TEST_LIST = {
   { "sqr", test_sqr },
   { "div", test_div },
   { "mod", test_mod },
+  { "shl", test_shl },
   { 0 }
 };
