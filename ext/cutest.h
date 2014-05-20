@@ -376,6 +376,7 @@ main(int argc, char** argv)
 {
     const struct test__** tests = NULL;
     int i, j, n = 0;
+    unsigned tests_mallocd = 0;
 
     test_argv0__ = argv[0];
 
@@ -399,6 +400,7 @@ main(int argc, char** argv)
             exit(0);
         } else if(argv[i][0] != '-') {
             tests = (const struct test__**) realloc(tests, (n+1) * sizeof(struct test__));
+            tests_mallocd = 1;
             tests[n] = test_by_name__(argv[i]);
             if(tests[n] == NULL) {
                 fprintf(stderr, "%s: Unrecognized unit test '%s'\n", argv[0], argv[i]);
@@ -465,6 +467,9 @@ main(int argc, char** argv)
                 printf("FAILED: %d of %d unit tests have failed.\n", test_stat_failed_units__, test_stat_run_units__);
         }
     }
+
+    if (tests_mallocd)
+      free(tests);
 
     return (test_stat_failed_units__ == 0) ? 0 : 1;
 }
