@@ -288,4 +288,9 @@ error bignum_mod(bignum *r, const bignum *a, const bignum *b);
  */
 error bignum_divmod(bignum *q, bignum *r, const bignum *a, const bignum *b);
 
+/** Return a * b mod p.
+ *
+ *  All arguments may alias an any combination. */
+error bignum_modmul(bignum *r, const bignum *a, const bignum *b, const bignum *p);
+
 #endif

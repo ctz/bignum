@@ -192,6 +192,13 @@ static void eval_shr(bignum *r, const bignum *arg1, const bignum *arg2, const bi
   assert(err == OK);
 }
 
+static void eval_modmul(bignum *r, const bignum *arg1, const bignum *arg2, const bignum *arg3)
+{
+  assert(arg1 && arg2 && arg3);
+  error err = bignum_modmul(r, arg1, arg2, arg3);
+  assert(err == OK);
+}
+
 typedef struct
 {
   const char *str;
@@ -199,6 +206,7 @@ typedef struct
 } eval;
 
 static const eval evaluators[] = {
+  { "modmul", eval_modmul },
   { "mul", eval_mul },
   { "add", eval_add },
   { "sub", eval_sub },
@@ -270,7 +278,7 @@ static void convert_eval_params(const char *str, const char *end,
     *(args[arg]) = bignum_alloc();                  \
     convert_bignum(args[arg], start, end - start);  \
     arg++;                                          \
-    assert(arg < 3);                                \
+    assert(arg <= 3);                               \
   }
 
   while (ptr != end)
@@ -431,6 +439,11 @@ static void test_shr(void)
 #include "test-shr.inc"
 }
 
+static void test_modmul(void)
+{
+#include "test-modmul.inc"
+}
+
 TEST_LIST = {
   { "basic_test", basic_test },
   { "inequality", inequality },
@@ -443,5 +456,6 @@ TEST_LIST = {
   { "mod", test_mod },
   { "shl", test_shl },
   { "shr", test_shr },
+  { "modmul", test_modmul },
   { 0 }
 };

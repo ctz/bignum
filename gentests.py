@@ -7,7 +7,7 @@ import sys
 
 TESTS = 8
 
-SIGNS = ((1, 1), (-1, 1), (1, -1), (-1, -1))
+SIGNS = (1, -1)
 SIZES = (16, 32, 64, 128, 192, 512, 1024, 2048, )
 
 def wordsz(n):
@@ -39,35 +39,25 @@ def random_carry(sz):
             a |= 0xf0000000 << shift
     return a
 
-def gen_tests(f, function, nargs, op, reject = lambda *x: False, sizesa = SIZES, sizesb = SIZES):
-    def gen2(sza, szb, candidate, signa = 1, signb = 1):
+def gen_tests(f, function, nargs, op, reject = lambda *x: False, sizesa = SIZES, sizesb = SIZES, sizesc = SIZES):
+    def gen(sizes, mkcandidate, signs):
         for _ in range(TESTS):
             first = True
-            a = b = 1
-            while first or reject(a, b):
-                a = candidate(sza) * signa
-                b = candidate(szb) * signb
+            candidates = [1] * nargs
+            while first or reject(*candidates):
+                for i in range(nargs):
+                    candidates[i] = mkcandidate(sizes[i]) * signs[i]
                 first = False
-            
-            print >>f, 'check("%s(%d, %d) == %d");' % (function, a, b, op(a, b))
-    
-    def gen1(sza, szb, candidate, signa = 1, signb = 1):
-        for _ in range(TESTS):
-            first = True
-            a = 1
-            while first or reject(a):
-                a = candidate(sza) * signa
-                first = False
+            args = ', '.join(str(x) for x in candidates)
+            print >>f, 'check("%s(%s) == %d");' % (function, args, op(*candidates))
 
-            print >>f, 'check("%s(%d) == %d");' % (function, a, op(a))
+    sizes = itertools.product(*[sizesa, sizesb, sizesc][:nargs])
+    signs = itertools.product(*([SIGNS] * nargs))
 
-    gen = gen1 if nargs == 1 else gen2
-    sizes = itertools.product(sizesa, (1,)) if nargs == 1 else itertools.product(sizesa, sizesb)
-
-    for signa, signb in SIGNS:
+    for sg in signs:
         for can in (random.getrandbits, random_carry):
-            for sza, szb in sizes:
-                gen(sza, szb, can, signa, signb)
+            for sz in sizes:
+                gen(sz, can, sg)
 
 def gen_tests_with_file(fout, funcname, *args, **kwargs):
     if fout is not None:
@@ -87,6 +77,7 @@ def emit_tests(fout = None):
     gen_tests_with_file(fout, 'div', 2, operator.div, reject = lambda p, d: d == 0)
     gen_tests_with_file(fout, 'shl', 2, operator.ilshift, sizesb = range(1, 8))
     gen_tests_with_file(fout, 'shr', 2, operator.irshift, sizesb = range(1, 10))
+    gen_tests_with_file(fout, 'modmul', 3, lambda x, y, p: (x * y) % p)
 
 if __name__ == '__main__':
     op = optparse.OptionParser()
