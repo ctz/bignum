@@ -18,6 +18,20 @@ static bignum bignum_alloc(void)
   return (bignum) { v, v, words, 0 };
 }
 
+/* Compact heap allocation to improve valgrind sensitivity. */
+static void bignum_compact(bignum *b)
+{
+  assert(b);
+  size_t words = bignum_len_words(b);
+  uint32_t *new_storage = malloc(words * BIGNUM_BYTES);
+  memcpy(new_storage, b->v, words * BIGNUM_BYTES);
+  free(b->v);
+  b->v = new_storage;
+  b->vtop = b->v + words - 1;
+  b->words = words;
+  assert(!bignum_check(b));
+}
+
 static void bignum_free(bignum *b)
 {
   if (!b)
@@ -285,10 +299,16 @@ static void convert_arg(bignum *num, const char *str, size_t len)
       arg0.v = arg1.v = arg2.v = NULL;
       convert_eval_params(str + strlen(e->str) + 1, str + len - 1,
                           &arg0, &arg1, &arg2);
+
+      if (arg0.v) bignum_compact(&arg0);
+      if (arg1.v) bignum_compact(&arg1);
+      if (arg2.v) bignum_compact(&arg2);
+
       e->fn(num,
             arg0.v ? &arg0 : NULL,
             arg1.v ? &arg1 : NULL,
             arg2.v ? &arg2 : NULL);
+
       if (arg0.v) bignum_free(&arg0);
       if (arg1.v) bignum_free(&arg1);
       if (arg2.v) bignum_free(&arg2);
@@ -309,6 +329,8 @@ static void check(const char *expr)
   bignum a = bignum_alloc(), b = bignum_alloc();
   convert_arg(&a, left, endleft - left);
   convert_arg(&b, right, endright - right);
+  bignum_compact(&a);
+  bignum_compact(&b);
   if (!TEST_CHECK_(equality->fn(&a, &b) == 1, "Expression '%s' is not true", expr))
   {
     print("lhs", &a);
@@ -332,6 +354,41 @@ static void inequality(void)
   check("1 >= 0");
   check("1 > -1");
   check("1234567890123456789 > 1234567890123456788");
+}
+
+static void test_stdin(void)
+{
+  char line[8192];
+  const char *callheader = "check(\"";
+  const char *calltrailer = "\");";
+  size_t lines = 0;
+
+  if (isatty(fileno(stdin)))
+    return;
+
+  while (1)
+  {
+    if (fgets(line, sizeof line, stdin) == NULL)
+      break;
+
+    char *end = line + strlen(line) - 1;
+    while (*end == '\r' || *end == '\n')
+      *end-- = '\0';
+
+    if (strstr(line, callheader) == line &&
+        strstr(line, calltrailer) == line + strlen(line) - strlen(calltrailer))
+    {
+      line[strlen(line) - strlen(calltrailer)] = '\0';
+      char *expr = line + strlen(callheader);
+      check(expr);
+      lines++;
+
+      if (lines % 1000 == 0)
+        printf("%zu lines\n", lines);
+    } else {
+      printf("ignored unhandled line: %s\n", line);
+    }
+  }
 }
 
 static void test_add(void)
@@ -377,6 +434,7 @@ static void test_shr(void)
 TEST_LIST = {
   { "basic_test", basic_test },
   { "inequality", inequality },
+  { "stdin", test_stdin },
   { "add", test_add },
   { "sub", test_sub },
   { "mul", test_mul },
