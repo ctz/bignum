@@ -132,6 +132,22 @@ uint8_t bignum_get_byte(const bignum *b, size_t n);
  */
 error bignum_set_byte(bignum *b, uint8_t v, size_t n);
 
+/** Returns the value of the nth bit in the bignum.
+ *
+ *  n = 0 gives the rightmost (LSB) bit.
+ *  n = bignum_len_bits(b)-1 gives the leftmost (MSB) bit.
+ *
+ *  Out of range n (ie >= bignum_len_bits(b)) returns zero.
+ */
+uint8_t bignum_get_bit(const bignum *b, size_t n);
+
+/** Sets the value of the nth bit in the bignum to !!v
+ *  (in other words, any non-zero value of v results in
+ *  a set bit.)
+ *
+ *  Out of range n returns error_bignum_sz. */
+error bignum_set_bit(bignum *b, uint8_t v, size_t n);
+
 /** Set b to have value l.
  *
  * This cannot fail, because even zero needs one word available.
@@ -290,7 +306,12 @@ error bignum_divmod(bignum *q, bignum *r, const bignum *a, const bignum *b);
 
 /** Return a * b mod p.
  *
- *  All arguments may alias an any combination. */
+ *  Arguments may alias in any combination. */
 error bignum_modmul(bignum *r, const bignum *a, const bignum *b, const bignum *p);
+
+/** Return a ^ b mod p.
+ *
+ *  Arguments may alias in any combination. */
+error bignum_modexp(bignum *r, const bignum *a, const bignum *b, const bignum *p);
 
 #endif

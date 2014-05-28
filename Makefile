@@ -5,7 +5,7 @@ all: testbignum
 BIGNUM = bignum.o bignum-math.o bignum-str.o \
 	 bignum-add.o bignum-sub.o bignum-mul.o \
 	 bignum-eq.o bignum-sqr.o bignum-div.o \
-	 bignum-shift.o bignum-modmul.o \
+	 bignum-shift.o bignum-modmul.o bignum-modexp.o \
 	 sstr.o
 
 testbignum: $(BIGNUM) testbignum.o

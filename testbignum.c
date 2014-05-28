@@ -3,6 +3,7 @@
 #include <string.h>
 #include <assert.h>
 #include <ctype.h>
+#include <sys/time.h>
 
 #include "bignum.h"
 #include "bignum-str.h"
@@ -39,6 +40,16 @@ static void bignum_free(bignum *b)
   assert(bignum_check(b) == OK);
   free(b->v);
   memset(b, 0, sizeof *b);
+}
+
+static double microtime(void)
+{
+  struct timeval tv;
+  gettimeofday(&tv, NULL);
+
+  double rv = tv.tv_sec;
+  rv += ((double) tv.tv_usec) / 1e6;
+  return rv;
 }
 
 static void print(const char *label, const bignum *b)
@@ -199,6 +210,19 @@ static void eval_modmul(bignum *r, const bignum *arg1, const bignum *arg2, const
   assert(err == OK);
 }
 
+static void eval_modexp(bignum *r, const bignum *arg1, const bignum *arg2, const bignum *arg3)
+{
+  assert(arg1 && arg2 && arg3);
+  double start = microtime();
+  error err = bignum_modexp(r, arg1, arg2, arg3);
+  printf("modexp(%zu,%zu,%zu bits) = %dms\n",
+         bignum_len_bits(arg1),
+         bignum_len_bits(arg2),
+         bignum_len_bits(arg3),
+         (int) ((microtime() - start) * 1000));
+  assert(err == OK);
+}
+
 typedef struct
 {
   const char *str;
@@ -207,6 +231,7 @@ typedef struct
 
 static const eval evaluators[] = {
   { "modmul", eval_modmul },
+  { "modexp", eval_modexp },
   { "mul", eval_mul },
   { "add", eval_add },
   { "sub", eval_sub },
@@ -346,7 +371,6 @@ static void check(const char *expr)
   }
   bignum_free(&a);
   bignum_free(&b);
-
 }
 
 static void inequality(void)
@@ -444,6 +468,11 @@ static void test_modmul(void)
 #include "test-modmul.inc"
 }
 
+static void test_modexp(void)
+{
+#include "test-modexp.inc"
+}
+
 TEST_LIST = {
   { "basic_test", basic_test },
   { "inequality", inequality },
@@ -457,5 +486,6 @@ TEST_LIST = {
   { "shl", test_shl },
   { "shr", test_shr },
   { "modmul", test_modmul },
+  { "modexp", test_modexp },
   { 0 }
 };

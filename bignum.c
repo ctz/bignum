@@ -189,7 +189,7 @@ size_t bignum_len_words(const bignum *b)
 
 size_t bignum_capacity_bits(const bignum *b)
 {
-  return b->words * BIGNUM_BYTES * 8;
+  return b->words * BIGNUM_BITS;
 }
 
 uint8_t bignum_get_byte(const bignum *b, size_t n)
@@ -197,7 +197,7 @@ uint8_t bignum_get_byte(const bignum *b, size_t n)
   assert(!bignum_check(b));
 
   size_t word = n / BIGNUM_BYTES;
-  size_t byte = n - word * BIGNUM_BYTES;
+  size_t byte = n % BIGNUM_BYTES;
 
   if (word > bignum_len_words(b))
     return 0;
@@ -205,20 +205,50 @@ uint8_t bignum_get_byte(const bignum *b, size_t n)
   return (b->v[word] >> (byte * 8)) & 0xff;
 }
 
+uint8_t bignum_get_bit(const bignum *b, size_t n)
+{
+  uint8_t byte = bignum_get_byte(b, n / 8);
+  n %= 8;
+  return (byte >> n) & 1;
+}
+
+static void edit_word(bignum *b, size_t word, uint32_t and, uint32_t or)
+{
+  uint32_t ww = b->v[word];
+  ww &= and;
+  ww |= or;
+  b->v[word] = ww;
+}
+
 error bignum_set_byte(bignum *b, uint8_t v, size_t n)
 {
   assert(!bignum_check_mutable(b));
 
   size_t word = n / BIGNUM_BYTES;
-  size_t byte = n - word * BIGNUM_BYTES;
+  size_t byte = n % BIGNUM_BYTES;
   size_t bit = byte * 8;
   
   ER(bignum_cleartop(b, word + 1));
-  uint32_t ww = b->v[word];
-  ww &= ~(0xff << bit);
-  ww |= v << bit;
-  b->v[word] = ww;
+  edit_word(b, word,
+            ~(0xff << bit),
+            v << bit);
   bignum_canon(b);
   return OK;
 }
 
+error bignum_set_bit(bignum *b, uint8_t v, size_t n)
+{
+  assert(!bignum_check_mutable(b));
+
+  size_t word = n / BIGNUM_BITS;
+  size_t bit = n % BIGNUM_BITS;
+
+  v = !!v;
+
+  ER(bignum_cleartop(b, word + 1));
+  edit_word(b, word,
+            ~(1 << bit),
+            v << bit);
+  bignum_canon(b);
+  return OK;
+}

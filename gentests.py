@@ -5,10 +5,12 @@ import math
 import optparse
 import sys
 
-TESTS = 8
+TESTS = 2
 
 SIGNS = (1, -1)
 SIZES = (16, 32, 64, 128, 192, 512, 1024, 2048, )
+SHIFT_SIZES = range(1, 8)
+EXP_SIZES = SIZES[:6]
 
 def wordsz(n):
     if n == 0:
@@ -75,9 +77,10 @@ def emit_tests(fout = None):
     gen_tests_with_file(fout, 'sqr', 1, lambda x: operator.pow(x, 2))
     gen_tests_with_file(fout, 'mod', 2, operator.mod, reject = lambda p, d: d == 0)
     gen_tests_with_file(fout, 'div', 2, operator.div, reject = lambda p, d: d == 0)
-    gen_tests_with_file(fout, 'shl', 2, operator.ilshift, sizesb = range(1, 8))
-    gen_tests_with_file(fout, 'shr', 2, operator.irshift, sizesb = range(1, 10))
+    gen_tests_with_file(fout, 'shl', 2, operator.ilshift, sizesb = SHIFT_SIZES)
+    gen_tests_with_file(fout, 'shr', 2, operator.irshift, sizesb = SHIFT_SIZES)
     gen_tests_with_file(fout, 'modmul', 3, lambda x, y, p: (x * y) % p)
+    gen_tests_with_file(fout, 'modexp', 3, pow, sizesb = EXP_SIZES)
 
 if __name__ == '__main__':
     op = optparse.OptionParser()
