@@ -23,7 +23,7 @@ error bignum_add(bignum *r, const bignum *a, const bignum *b)
   if (nega && negb)
   {
     /* -a + -b case. */
-    r->flags |= BIGNUM_F_NEG;
+    bignum_setsign(r, -1);
   } else if (nega ^ negb) {
     /* -a + b and a + -b cases. */
     if (nega)
@@ -32,10 +32,14 @@ error bignum_add(bignum *r, const bignum *a, const bignum *b)
       SWAP(a, b);
     }
 
-    return bignum_sub_unsigned(r, a, b);
+    unsigned result_negative = bignum_mag_lt(a, b);
+
+    error e = bignum_sub_unsigned(r, a, b);
+    bignum_setsign(r, result_negative ? -1 : 1);
+    return e;
   } else {
     /* a + b case. */
-    r->flags &= ~BIGNUM_F_NEG;
+    bignum_setsign(r, 1);
   }
 
   return bignum_add_unsigned(r, a, b);

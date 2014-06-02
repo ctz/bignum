@@ -59,7 +59,7 @@ void bignum_canon(bignum *b)
     b->vtop--;
   
   if (bignum_is_zero(b))
-    b->flags &= ~BIGNUM_F_NEG;
+    bignum_setsign(b, 0);
 }
 
 void bignum_clear(bignum *b)
@@ -99,7 +99,7 @@ void bignum_setu(bignum *b, uint32_t l)
   memset(b->v, 0, b->words * BIGNUM_BYTES);
   *b->v = l;
   b->vtop = b->v;
-  b->flags &= ~BIGNUM_F_NEG;
+  bignum_setsign(b, 1);
   bignum_canon(b);
 }
 
@@ -108,7 +108,7 @@ void bignum_set(bignum *b, int32_t v)
   if (v < 0)
   {
     bignum_setu(b, (uint32_t) -v);
-    b->flags |= BIGNUM_F_NEG;
+    bignum_setsign(b, -1);
   } else {
     bignum_setu(b, (uint32_t) v);
   }
@@ -117,17 +117,14 @@ void bignum_set(bignum *b, int32_t v)
 void bignum_neg(bignum *b)
 {
   assert(!bignum_check_mutable(b));
-  if (b->flags & BIGNUM_F_NEG)
-    b->flags &= ~BIGNUM_F_NEG;
-  else
-    b->flags |= BIGNUM_F_NEG;
+  bignum_setsign(b, -bignum_getsign(b));
   bignum_canon(b);
 }
 
 void bignum_abs(bignum *b)
 {
   assert(!bignum_check_mutable(b));
-  b->flags &= ~BIGNUM_F_NEG;
+  bignum_setsign(b, 1);
   bignum_canon(b);
 }
 
@@ -137,9 +134,9 @@ unsigned bignum_eq32(const bignum *b, int32_t v)
     return 0;
   else if (v == 0 && *b->v == 0)
     return 1;
-  else if (v < 0 && *b->v == (uint32_t) -v && (b->flags & BIGNUM_F_NEG))
+  else if (v < 0 && *b->v == (uint32_t) -v && bignum_is_negative(b))
     return 1;
-  else if (v > 0 && *b->v == (uint32_t) v && !(b->flags & BIGNUM_F_NEG))
+  else if (v > 0 && *b->v == (uint32_t) v && !bignum_is_negative(b))
     return 1;
   else
     return 0;
@@ -150,7 +147,7 @@ unsigned bignum_is_zero(const bignum *b)
   return bignum_eq32(b, 0);
 }
 
-int bignum_sign(const bignum *b)
+int bignum_getsign(const bignum *b)
 {
   if (bignum_is_zero(b))
     return 1;
@@ -158,6 +155,15 @@ int bignum_sign(const bignum *b)
     return -1;
   else
     return 1;
+}
+
+void bignum_setsign(bignum *b, int sign)
+{
+  assert(!bignum_check_mutable(b));
+  if (sign < 0)
+    b->flags |= BIGNUM_F_NEG;
+  else
+    b->flags &= ~BIGNUM_F_NEG;
 }
 
 size_t bignum_len_bits(const bignum *b)

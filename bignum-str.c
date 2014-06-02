@@ -172,7 +172,7 @@ error bignum_parse_strl(bignum *r, const char *buf, size_t len)
     err = parse_dec(r, &s);
 
   if (err == OK && neg)
-    bignum_neg(r);
+    bignum_setsign(r, -1);
 
   bignum_canon(r);
   return err;

@@ -19,19 +19,18 @@ error bignum_mul(bignum *r, const bignum *a, const bignum *b)
   /* Shortcuts? */
 
   /* x * 0 -> 0 */
-  if ((sza == 1 && bignum_eq32(a, 0)) ||
-      (szb == 1 && bignum_eq32(b, 0)))
+  if (bignum_eq32(a, 0) || bignum_eq32(b, 0))
   {
     bignum_set(r, 0);
     return OK;
   }
 
   /* 1 * b -> b */
-  if (sza == 1 && bignum_eq32(a, 1))
+  if (bignum_eq32(a, 1))
     return bignum_dup(r, b);
 
   /* a * 1 -> a */
-  if (szb == 1 && bignum_eq32(b, 1))
+  if (bignum_eq32(b, 1))
     return bignum_dup(r, a);
 
   if (bignum_capacity_bits(r) < sza + szb)
@@ -60,8 +59,7 @@ error bignum_mul(bignum *r, const bignum *a, const bignum *b)
 
   unsigned nega = bignum_is_negative(a),
            negb = bignum_is_negative(b);
-  if (nega ^ negb)
-    r->flags |= BIGNUM_F_NEG;
+  bignum_setsign(r, (nega ^ negb) ? -1 : 1);
 
   bignum_canon(r);
   return OK;

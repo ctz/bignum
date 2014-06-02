@@ -223,6 +223,64 @@ static void eval_modexp(bignum *r, const bignum *arg1, const bignum *arg2, const
   assert(err == OK);
 }
 
+static void eval_gcd(bignum *r, const bignum *arg1, const bignum *arg2, const bignum *arg3)
+{
+  assert(arg1 && arg2 && !arg3);
+  error err = bignum_gcd(r, arg1, arg2);
+  assert(err == OK);
+}
+
+static unsigned check_egcd(const bignum *gcd, const bignum *a, const bignum *b,
+                           const bignum *x, const bignum *y)
+{
+  BIGNUM_TMP(v1);
+  BIGNUM_TMP(v2);
+
+  error err = bignum_mul(&v1, a, x);
+  assert(err == OK);
+  err = bignum_mul(&v2, b, y);
+  assert(err == OK);
+  err = bignum_addl(&v1, &v2);
+  assert(err == OK);
+  return bignum_eq(gcd, &v1);
+}
+
+static void eval_egcd_v(bignum *r, const bignum *arg1, const bignum *arg2, const bignum *arg3)
+{
+  assert(arg1 && arg2 && !arg3);
+
+  BIGNUM_TMP(a);
+  BIGNUM_TMP(b);
+  error err = bignum_extended_gcd(r, &a, &b, arg1, arg2);
+  assert(err == OK);
+
+  assert(check_egcd(r, &a, &b, arg1, arg2));
+}
+
+static void eval_egcd_a(bignum *r, const bignum *arg1, const bignum *arg2, const bignum *arg3)
+{
+  assert(arg1 && arg2 && !arg3);
+
+  BIGNUM_TMP(v);
+  BIGNUM_TMP(b);
+  error err = bignum_extended_gcd(&v, r, &b, arg1, arg2);
+  assert(err == OK);
+  
+  assert(check_egcd(&v, r, &b, arg1, arg2));
+}
+
+static void eval_egcd_b(bignum *r, const bignum *arg1, const bignum *arg2, const bignum *arg3)
+{
+  assert(arg1 && arg2 && !arg3);
+
+  BIGNUM_TMP(v);
+  BIGNUM_TMP(a);
+  error err = bignum_extended_gcd(&v, &a, r, arg1, arg2);
+  assert(err == OK);
+  
+  assert(check_egcd(&v, &a, r, arg1, arg2));
+}
+
 typedef struct
 {
   const char *str;
@@ -232,6 +290,10 @@ typedef struct
 static const eval evaluators[] = {
   { "modmul", eval_modmul },
   { "modexp", eval_modexp },
+  { "egcd-v", eval_egcd_v },
+  { "egcd-a", eval_egcd_a },
+  { "egcd-b", eval_egcd_b },
+  { "gcd", eval_gcd },
   { "mul", eval_mul },
   { "add", eval_add },
   { "sub", eval_sub },
@@ -388,6 +450,16 @@ static void inequality(void)
   check("1234567890123456789 > 1234567890123456788");
 }
 
+static void addsign(void)
+{
+  check("sub(0,1) == -1");
+  check("sub(1,2) == -1");
+  check("add(1,-1) == 0");
+  check("add(-1,1) == 0");
+  check("add(-1,2) == 1");
+  check("add(-1,-1) == -2");
+}
+
 static void test_stdin(void)
 {
   char line[8192];
@@ -473,9 +545,30 @@ static void test_modexp(void)
 #include "test-modexp.inc"
 }
 
+static void test_gcd(void)
+{
+#include "test-gcd.inc"
+}
+
+static void test_egcd_v(void)
+{
+#include "test-egcd-v.inc"
+}
+
+static void test_egcd_a(void)
+{
+#include "test-egcd-a.inc"
+}
+
+static void test_egcd_b(void)
+{
+#include "test-egcd-b.inc"
+}
+
 TEST_LIST = {
   { "basic_test", basic_test },
   { "inequality", inequality },
+  { "addsign", addsign },
   { "stdin", test_stdin },
   { "add", test_add },
   { "sub", test_sub },
@@ -487,5 +580,9 @@ TEST_LIST = {
   { "shr", test_shr },
   { "modmul", test_modmul },
   { "modexp", test_modexp },
+  { "gcd", test_gcd },
+  { "egcd-v", test_egcd_v },
+  { "egcd-a", test_egcd_a },
+  { "egcd-b", test_egcd_b },
   { 0 }
 };

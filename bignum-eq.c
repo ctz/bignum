@@ -11,9 +11,9 @@ unsigned bignum_lt(const bignum *a, const bignum *b)
   assert(!bignum_check(b));
 
   /* Check sign */
-  if (bignum_sign(a) < bignum_sign(b))
+  if (bignum_getsign(a) < bignum_getsign(b))
     return 1;
-  else if (bignum_sign(a) > bignum_sign(b))
+  else if (bignum_getsign(a) > bignum_getsign(b))
     return 0;
 
   return bignum_mag_lt(a, b);
@@ -27,7 +27,7 @@ unsigned bignum_mag_lt(const bignum *a, const bignum *b)
   /* Check sizes */
   size_t sza = bignum_len_bits(a);
   size_t szb = bignum_len_bits(b);
-  
+
   if (sza < szb)
     return 1;
   else if (sza > szb)
@@ -82,7 +82,7 @@ unsigned bignum_mag_gte(const bignum *a, const bignum *b)
 /* --- Equality --- */
 unsigned bignum_eq(const bignum *a, const bignum *b)
 {
-  if (bignum_sign(a) != bignum_sign(b))
+  if (bignum_getsign(a) != bignum_getsign(b))
     return 0;
 
   return bignum_mag_eq(a, b);
@@ -106,7 +106,7 @@ unsigned bignum_mag_eq(const bignum *a, const bignum *b)
 
 unsigned bignum_const_eq(const bignum *a, const bignum *b)
 {
-  uint32_t neq = (bignum_sign(a) ^ bignum_sign(b));
+  uint32_t neq = (bignum_getsign(a) ^ bignum_getsign(b));
   neq |= (bignum_len_bits(a) ^ bignum_len_bits(b));
 
   for (uint32_t *va = a->vtop, *vb = b->vtop;

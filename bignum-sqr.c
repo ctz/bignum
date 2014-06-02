@@ -13,7 +13,7 @@ static error bignum_sqr_tmp(bignum *r, const bignum *a)
 }
 
 /* TODO: make this twice as fast by memoising the
- * intermiediate products. */
+ * intermediate products. */
 error bignum_sqr(bignum *r, const bignum *a)
 {
   assert(!bignum_check_mutable(r));

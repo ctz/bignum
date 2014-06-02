@@ -165,12 +165,15 @@ void bignum_neg(bignum *b);
 void bignum_abs(bignum *b);
 
 /** (b < 0) ? -1 : 1 */
-int bignum_sign(const bignum *b);
+int bignum_getsign(const bignum *b);
+
+/** Set b = -abs(b) if sign < 0, else b = abs(b). */
+void bignum_setsign(bignum *b, int sign);
 
 /** Returns 1 if b is negative, 0 otherwise. */
 static inline unsigned bignum_is_negative(const bignum *b)
 {
-  return bignum_sign(b) == -1;
+  return bignum_getsign(b) == -1;
 }
 
 /** Returns 1 if b is zero, 0 otherwise. */
@@ -313,5 +316,19 @@ error bignum_modmul(bignum *r, const bignum *a, const bignum *b, const bignum *p
  *
  *  Arguments may alias in any combination. */
 error bignum_modexp(bignum *r, const bignum *a, const bignum *b, const bignum *p);
+
+/** v = gcd(x, y)
+ *
+ *  Arguments may alias in any combination. */
+error bignum_gcd(bignum *v, const bignum *x, const bignum *y);
+
+/** v = gcd(x, y), with ax + by = v.
+ *
+ *  v may not alias x, y, a or b.
+ *  a may not alias x, y, v or b.
+ *  b may not alias x, y, a or v.
+ */
+error bignum_extended_gcd(bignum *v, bignum *a, bignum *b,
+                          const bignum *x, const bignum *y);
 
 #endif

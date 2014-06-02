@@ -26,30 +26,21 @@ error bignum_sub(bignum *r, const bignum *a, const bignum *b)
   } else if (nega ^ negb) {
     error err = bignum_add_unsigned(r, a, b);
     if (nega)
-      r->flags |= BIGNUM_F_NEG;
+      bignum_setsign(r, -1);
     return err;
   }
 
   return bignum_sub_unsigned(r, a, b);
 }
 
-static unsigned lt_unsigned(const bignum *a, const bignum *b)
-{
-  bignum ua = *a;
-  bignum ub = *b;
-
-  ua.flags &= ~BIGNUM_F_NEG;
-  ub.flags &= ~BIGNUM_F_NEG;
-
-  return bignum_lt(&ua, &ub);
-}
-
 error bignum_sub_unsigned(bignum *r, const bignum *a, const bignum *b)
 {
-  if (lt_unsigned(a, b))
+  if (bignum_mag_lt(a, b))
   {
     SWAP(a, b);
-    r->flags |= BIGNUM_F_NEG;
+    bignum_setsign(r, -1);
+  } else {
+    bignum_abs(r);
   }
 
   uint32_t *atop = a->vtop,

@@ -5,6 +5,8 @@ import math
 import optparse
 import sys
 
+from dumbegcd import egcd
+
 TESTS = 2
 
 SIGNS = (1, -1)
@@ -70,6 +72,15 @@ def gen_tests_with_file(fout, funcname, *args, **kwargs):
             gen_tests(f, funcname, *args, **kwargs)
         print filename, 'written.'
 
+def gcd(a, b):
+    while b:
+        a, b = b, a%b
+    return a
+
+def egcd_v(a, b): return egcd(a, b)[0]
+def egcd_a(a, b): return egcd(a, b)[1]
+def egcd_b(a, b): return egcd(a, b)[2]
+
 def emit_tests(fout = None):
     gen_tests_with_file(fout, 'mul', 2, operator.mul)
     gen_tests_with_file(fout, 'add', 2, operator.add)
@@ -81,6 +92,10 @@ def emit_tests(fout = None):
     gen_tests_with_file(fout, 'shr', 2, operator.irshift, sizesb = SHIFT_SIZES)
     gen_tests_with_file(fout, 'modmul', 3, lambda x, y, p: (x * y) % p)
     gen_tests_with_file(fout, 'modexp', 3, pow, sizesb = EXP_SIZES)
+    gen_tests_with_file(fout, 'gcd', 2, gcd)
+    gen_tests_with_file(fout, 'egcd-v', 2, egcd_v)
+    gen_tests_with_file(fout, 'egcd-a', 2, egcd_a)
+    gen_tests_with_file(fout, 'egcd-b', 2, egcd_b)
 
 if __name__ == '__main__':
     op = optparse.OptionParser()
