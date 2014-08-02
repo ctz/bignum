@@ -7,10 +7,11 @@
 #include "bignum-math.h"
 #include "handy.h"
 
-static uint32_t zero = 0, one = 1;
+static uint32_t zero = 0, one = 1, base[2] = { 0, 1 };
 bignum bignum_0 = { &zero, &zero, 1, BIGNUM_F_IMMUTABLE };
 bignum bignum_1 = { &one, &one, 1, BIGNUM_F_IMMUTABLE };
 bignum bignum_neg1 = { &one, &one, 1, BIGNUM_F_IMMUTABLE | BIGNUM_F_NEG };
+bignum bignum_base = { &base[0], &base[1], 2, BIGNUM_F_IMMUTABLE };
 
 error bignum_check(const bignum *b)
 {
@@ -20,7 +21,7 @@ error bignum_check(const bignum *b)
       b->v > b->vtop ||
       bignum_len_words(b) > b->words ||
       b->words == 0 ||
-      b->words > BIGNUM_MAX_WORDS ||
+//      b->words > BIGNUM_MAX_WORDS ||
       (b->flags & ~BIGNUM_F__ALL))
     return error_invalid_bignum;
   return OK;
@@ -38,7 +39,7 @@ error bignum_cleartop(bignum *b, size_t words)
   assert(!bignum_check_mutable(b));
   assert(words != 0);
 
-  if (words == 0 || words >= b->words)
+  if (words == 0 || words > b->words)
     return error_bignum_sz;
 
   uint32_t *newtop = b->v + words - 1;
@@ -147,6 +148,18 @@ unsigned bignum_is_zero(const bignum *b)
   return bignum_eq32(b, 0);
 }
 
+unsigned bignum_is_even(const bignum *b)
+{
+  assert(!bignum_check(b));
+  return (b->v[0] & 1) == 0;
+}
+
+unsigned bignum_is_odd(const bignum *b)
+{
+  assert(!bignum_check(b));
+  return (b->v[0] & 1) == 1;
+}
+
 int bignum_getsign(const bignum *b)
 {
   if (bignum_is_zero(b))
@@ -211,11 +224,24 @@ uint8_t bignum_get_byte(const bignum *b, size_t n)
   return (b->v[word] >> (byte * 8)) & 0xff;
 }
 
-uint8_t bignum_get_bit(const bignum *b, size_t n)
+uint8_t bignum_get_bit(const bignum *b, size_t i)
 {
-  uint8_t byte = bignum_get_byte(b, n / 8);
-  n %= 8;
-  return (byte >> n) & 1;
+  uint8_t byte = bignum_get_byte(b, i / 8);
+  i %= 8;
+  return (byte >> i) & 1;
+}
+
+uint32_t bignum_get_bits(const bignum *b, size_t i, size_t n)
+{
+  uint32_t r = 0;
+  assert(n <= 32);
+
+  for (size_t j = 0; j < n; j++)
+  {
+    r |= ((uint32_t) bignum_get_bit(b, i + j)) << j;
+  }
+
+  return r;
 }
 
 static void edit_word(bignum *b, size_t word, uint32_t and, uint32_t or)

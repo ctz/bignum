@@ -11,7 +11,8 @@ typedef enum
   error_buffer_sz,
   error_bignum_sz,
   error_invalid_string,
-  error_div_zero
+  error_div_zero,
+  error_no_inverse
 } error;
 
 #define BIGNUM_BYTES 4
@@ -54,16 +55,18 @@ typedef struct
   uint16_t flags;
 } bignum;
 
-/** Pre-canned immutable bignums. */
-extern bignum bignum_0, bignum_1, bignum_neg1;
+/** Pre-canned immutable bignums: 0, 1, -1 and 2 ** BIGNUM_BITS. */
+extern bignum bignum_0, bignum_1, bignum_neg1, bignum_base;
+
+#define BIGNUM_TMP_SZ(var, words) \
+  uint32_t var ## _words[words] = { 0 }; \
+  bignum var = { var ## _words, var ## _words, words, 0 }
 
 /** Defines a bignum with identifier var, suitable for providing as a
  *  temporary for functions which need it.
  *
  *  This uses quite a lot of stack, so consider doing it once per thread. */
-#define BIGNUM_TMP(var) \
-  uint32_t var ## _words[BIGNUM_MAX_WORDS] = { 0 }; \
-  bignum var = { var ## _words, var ## _words, BIGNUM_MAX_WORDS, 0 }
+#define BIGNUM_TMP(var) BIGNUM_TMP_SZ(var, BIGNUM_MAX_WORDS)
 
 /** Sanity check b.
  *
@@ -132,21 +135,27 @@ uint8_t bignum_get_byte(const bignum *b, size_t n);
  */
 error bignum_set_byte(bignum *b, uint8_t v, size_t n);
 
-/** Returns the value of the nth bit in the bignum.
+/** Returns the value of the i-th bit in the bignum.
  *
- *  n = 0 gives the rightmost (LSB) bit.
- *  n = bignum_len_bits(b)-1 gives the leftmost (MSB) bit.
+ *  i = 0 gives the rightmost (LSB) bit.
+ *  i = bignum_len_bits(b)-1 gives the leftmost (MSB) bit.
  *
- *  Out of range n (ie >= bignum_len_bits(b)) returns zero.
+ *  Out of range i (ie >= bignum_len_bits(b)) returns zero.
  */
-uint8_t bignum_get_bit(const bignum *b, size_t n);
+uint8_t bignum_get_bit(const bignum *b, size_t i);
 
-/** Sets the value of the nth bit in the bignum to !!v
+/** Sets the value of the i-th bit in the bignum to !!v
  *  (in other words, any non-zero value of v results in
  *  a set bit.)
  *
  *  Out of range n returns error_bignum_sz. */
-error bignum_set_bit(bignum *b, uint8_t v, size_t n);
+error bignum_set_bit(bignum *b, uint8_t v, size_t i);
+
+/** Returns the value of the [i,i+n) bits from b.
+ *  n <= 32.  n = 1 is obviously equivalent to bignum_get_bit.
+ *
+ *  Bits out of range are zero. */
+uint32_t bignum_get_bits(const bignum *b, size_t i, size_t n);
 
 /** Set b to have value l.
  *
@@ -178,6 +187,12 @@ static inline unsigned bignum_is_negative(const bignum *b)
 
 /** Returns 1 if b is zero, 0 otherwise. */
 unsigned bignum_is_zero(const bignum *b);
+
+/** Returns 1 if b is even, 0 otherwise. */
+unsigned bignum_is_even(const bignum *b);
+
+/** Returns 1 if b is odd, 0 otherwise. */
+unsigned bignum_is_odd(const bignum *b);
 
 /** Returns 1 if abs(a) == abs(b), 0 otherwise. */
 unsigned bignum_mag_eq(const bignum *a, const bignum *b);
@@ -284,6 +299,12 @@ error bignum_shr(bignum *r, size_t bits);
 /** r = a ^ 2. */
 error bignum_sqr(bignum *r, const bignum *a);
 
+/** Truncates r by removing set bits over the given
+ *  threshold.  So r &= (2 ** bits) - 1, or
+ *  equivalently r %= 2 ** bits.
+ */
+error bignum_trunc(bignum *r, size_t bits);
+
 /** r = a / b.
  *
  * r MUST NOT alias a or b.
@@ -324,11 +345,19 @@ error bignum_gcd(bignum *v, const bignum *x, const bignum *y);
 
 /** v = gcd(x, y), with ax + by = v.
  *
- *  v may not alias x, y, a or b.
- *  a may not alias x, y, v or b.
- *  b may not alias x, y, a or v.
+ *  Arguments may alias in any combination.
  */
 error bignum_extended_gcd(bignum *v, bignum *a, bignum *b,
                           const bignum *x, const bignum *y);
+
+/** Finds z such that az mod m = 1.  In other words, find the
+ *  multiplicitive inverse of a mod m.
+ *
+ *  Returns error_no_inverse if gcd(a, m) != 1.
+ *
+ *  Arguments may alias in any combination. */
+error bignum_modinv(bignum *z, const bignum *a, const bignum *m);
+
+error bignum_monty_modexp(bignum *r, const bignum *a, const bignum *b, const bignum *p);
 
 #endif

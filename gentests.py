@@ -81,6 +81,23 @@ def egcd_v(a, b): return egcd(a, b)[0]
 def egcd_a(a, b): return egcd(a, b)[1]
 def egcd_b(a, b): return egcd(a, b)[2]
 
+def gcd_eq_zero(x, m):
+    # reject modinv tests which won't work
+    # because value isn't relatively prime
+    # to modulus
+    return gcd(x, m) != 1
+
+def modinv(x, m):
+    gcd, a, b = egcd(x, m)
+    assert gcd == 1
+    if a < 0:
+        a += m
+    assert (a * x) % m == 1
+    return a
+
+def trunc(a, b):
+    return a % (2 ** b)
+
 def emit_tests(fout = None):
     gen_tests_with_file(fout, 'mul', 2, operator.mul)
     gen_tests_with_file(fout, 'add', 2, operator.add)
@@ -90,12 +107,14 @@ def emit_tests(fout = None):
     gen_tests_with_file(fout, 'div', 2, operator.div, reject = lambda p, d: d == 0)
     gen_tests_with_file(fout, 'shl', 2, operator.ilshift, sizesb = SHIFT_SIZES)
     gen_tests_with_file(fout, 'shr', 2, operator.irshift, sizesb = SHIFT_SIZES)
+    gen_tests_with_file(fout, 'trunc', 2, trunc, sizesb = SHIFT_SIZES)
     gen_tests_with_file(fout, 'modmul', 3, lambda x, y, p: (x * y) % p)
     gen_tests_with_file(fout, 'modexp', 3, pow, sizesb = EXP_SIZES)
     gen_tests_with_file(fout, 'gcd', 2, gcd)
     gen_tests_with_file(fout, 'egcd-v', 2, egcd_v)
     gen_tests_with_file(fout, 'egcd-a', 2, egcd_a)
     gen_tests_with_file(fout, 'egcd-b', 2, egcd_b)
+    gen_tests_with_file(fout, 'modinv', 2, modinv, reject = gcd_eq_zero)
 
 if __name__ == '__main__':
     op = optparse.OptionParser()

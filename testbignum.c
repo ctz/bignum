@@ -7,6 +7,7 @@
 
 #include "bignum.h"
 #include "bignum-str.h"
+#include "bignum-dbg.h"
 #include "ext/cutest.h"
 
 static bignum bignum_alloc(void)
@@ -203,6 +204,16 @@ static void eval_shr(bignum *r, const bignum *arg1, const bignum *arg2, const bi
   assert(err == OK);
 }
 
+static void eval_trunc(bignum *r, const bignum *arg1, const bignum *arg2, const bignum *arg3)
+{
+  assert(arg1 && arg2 && !arg3);
+  assert(bignum_len_words(arg2) == 1 && !bignum_is_negative(arg2));
+  error err = bignum_dup(r, arg1);
+  assert(err == OK);
+  err = bignum_trunc(r, (size_t) *arg2->vtop);
+  assert(err == OK);
+}
+
 static void eval_modmul(bignum *r, const bignum *arg1, const bignum *arg2, const bignum *arg3)
 {
   assert(arg1 && arg2 && arg3);
@@ -220,6 +231,13 @@ static void eval_modexp(bignum *r, const bignum *arg1, const bignum *arg2, const
          bignum_len_bits(arg2),
          bignum_len_bits(arg3),
          (int) ((microtime() - start) * 1000));
+  assert(err == OK);
+}
+
+static void eval_modinv(bignum *r, const bignum *arg1, const bignum *arg2, const bignum *arg3)
+{
+  assert(arg1 && arg2 && !arg3);
+  error err = bignum_modinv(r, arg1, arg2);
   assert(err == OK);
 }
 
@@ -290,9 +308,11 @@ typedef struct
 static const eval evaluators[] = {
   { "modmul", eval_modmul },
   { "modexp", eval_modexp },
+  { "modinv", eval_modinv },
   { "egcd-v", eval_egcd_v },
   { "egcd-a", eval_egcd_a },
   { "egcd-b", eval_egcd_b },
+  { "trunc", eval_trunc },
   { "gcd", eval_gcd },
   { "mul", eval_mul },
   { "add", eval_add },
@@ -535,6 +555,11 @@ static void test_shr(void)
 #include "test-shr.inc"
 }
 
+static void test_trunc(void)
+{
+#include "test-trunc.inc"
+}
+
 static void test_modmul(void)
 {
 #include "test-modmul.inc"
@@ -565,6 +590,38 @@ static void test_egcd_b(void)
 #include "test-egcd-b.inc"
 }
 
+static void test_modinv(void)
+{
+#include "test-modinv.inc"
+}
+
+static void test_tmp(void)
+{
+  bignum r = bignum_alloc();
+  bignum a = bignum_alloc();
+  bignum b = bignum_alloc();
+  bignum m = bignum_alloc();
+
+  convert_bignum(&a, "1234", 4);
+  convert_bignum(&b, "12345", 5);
+  convert_bignum(&m, "65537", 5);
+ 
+#define CVT(b, s) convert_bignum(b, s, strlen(s))
+  CVT(&a, "14153924530090965394919532554083129011339689641180054572970226165253621388915525381940673590310917382169447025605078963994794392098183936007320331349640692031040307240991764266762920997387483158018635978221086441099844751435784216759700347053570729924214912095877784994436622562280618683690071693616001890567971497317838707789228554441389917541987638377756468515159223957122739100545353153879316263189235419146023726102561433363768581777202090587298064679649568858461628718919588144869129570290114681739908809975394312428014856324017927279028671045332868282262679717325946118090566862713240887036210357199593588407914");
+  CVT(&b, "6639205078546258975757452162850607528165415572809400605004210280504947207297105624752687727261766402565599936323334870741265876752872267421620357760077138");
+  CVT(&m, "20358481908165693362811974050799856322045132160870967721041877715814977265133934422775034518572980077904621893288671472331222768982626308469196562985222617773567880157235999304333034415169710803157310005446295753358812399262359384978430013372825415229533169439503196855124334302644468286326886402277165742935042419696819433923043251551464917036093303853827887517997551003785466071654540103300333773885658620771321421685280236413095003543262913461419974707415770914021341414615351215338619218866102321422703159659294131721254895704716051910382018069241765998611482771516360241354683883446177454652768114084957405587969");
+  
+  error err = bignum_modexp(&r, &a, &b, &m);
+  assert(err == OK);
+
+  bignum_dump("r", &r);
+
+  bignum_free(&r);
+  bignum_free(&a);
+  bignum_free(&b);
+  bignum_free(&m);
+}
+
 TEST_LIST = {
   { "basic_test", basic_test },
   { "inequality", inequality },
@@ -578,11 +635,14 @@ TEST_LIST = {
   { "mod", test_mod },
   { "shl", test_shl },
   { "shr", test_shr },
+  { "trunc", test_trunc },
   { "modmul", test_modmul },
   { "modexp", test_modexp },
+  { "modinv", test_modinv },
   { "gcd", test_gcd },
   { "egcd-v", test_egcd_v },
   { "egcd-a", test_egcd_a },
   { "egcd-b", test_egcd_b },
+  { "tmp", test_tmp },
   { 0 }
 };

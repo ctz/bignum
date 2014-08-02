@@ -101,3 +101,29 @@ error bignum_shr(bignum *r, size_t bits)
   bignum_canon(r);
   return OK;
 }
+
+error bignum_trunc(bignum *r, size_t bits)
+{
+  assert(!bignum_check_mutable(r));
+
+  /* Anything to do? */
+  if (bits >= bignum_len_bits(r))
+    return OK;
+
+  size_t word = bits / BIGNUM_BITS;
+  uint32_t mask = (1 << (bits % BIGNUM_BITS)) - 1;
+
+  for (uint32_t *top = r->v + word + 1;
+       top <= r->vtop;
+       top++)
+    *top = 0;
+
+  /* This access is OK because:
+   * 1. On entry, r contained a bit set to the left of 'bits'.
+   * 2. Therefore, r, contained a valid word at least at bits / 32.
+   */
+  r->v[word] &= mask;
+  bignum_canon(r);
+  return OK;
+
+}
