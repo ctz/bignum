@@ -1,6 +1,8 @@
 #ifndef HANDY_H
 #define HANDY_H
 
+#include <stdint.h>
+
 /*
  * Handy CPP defines and C inline functions.
  */
@@ -42,6 +44,25 @@
  *  x_err and 'error err'. */
 #define EG(expr) do { err = (expr); if (err) goto x_err; } while (0)
 
+/** Like memset(ptr, 0, len), but not allowed to be removed by
+ *  compilers. */
+static inline void mem_clean(volatile void *v, size_t len)
+{
+  while (len >= 4)
+  {
+    volatile uint32_t *u32 = v;
+    *u32++ = 0;
+    v = u32;
+    len -= 4;
+  }
 
+  while (len)
+  {
+    volatile uint8_t *u8 = v;
+    *u8++ = 0;
+    v = u8;
+    len--;
+  }
+}
 
 #endif
