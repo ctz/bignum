@@ -20,7 +20,6 @@ error bignum_modexp(bignum *r, const bignum *a, const bignum *b, const bignum *p
 
   monty_ctx monty;
   unsigned use_monty = bignum_monty_setup(p, &monty);
-  printf("-----\nuse_monty = %u\n", use_monty);
 
   BIGNUM_TMP(tmp);
   (void) tmp;

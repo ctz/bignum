@@ -1,4 +1,6 @@
-CFLAGS += -g -O0 -std=gnu99 -Wall -Wextra -Werror -Wno-unused-parameter
+FEATURES =
+# -DWITH_MONTY
+CFLAGS += -g -O0 -std=gnu99 -Wall -Wextra -Werror -Wno-unused-parameter $(FEATURES)
 
 all: testbignum
 

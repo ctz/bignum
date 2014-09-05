@@ -39,6 +39,7 @@ static uint32_t modinv_u32(uint32_t n)
 /* Fills in *mont and returns 1 if montgomery reduction will work. */
 unsigned bignum_monty_setup(const bignum *m, monty_ctx *mont)
 {
+#ifdef WITH_MONTY
   if (bignum_is_odd(m))
   {
     /* R = b^n, where n is the number of digits in modulus. */
@@ -49,6 +50,9 @@ unsigned bignum_monty_setup(const bignum *m, monty_ctx *mont)
     mont->mprime = modinv_u32(m->v[0]);
     return 1;
   }
+#else
+  (void) modinv_u32;
+#endif
 
   return 0;
 }
