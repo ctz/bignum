@@ -65,9 +65,8 @@ void bignum_canon(bignum *b)
 void bignum_clear(bignum *b)
 {
   assert(!bignum_check_mutable(b));
-  for (uint32_t *v = b->v; v <= b->vtop; v++)
-    *v = 0;
-  memset(b, 0, sizeof *b);
+  mem_clean(b->v, b->words * BIGNUM_BYTES);
+  mem_clean(b, sizeof *b);
 }
 
 error bignum_dup(bignum *r, const bignum *a)
@@ -88,6 +87,8 @@ error bignum_dup(bignum *r, const bignum *a)
     *vr = *va;
     r->vtop = vr;
   }
+
+  r->flags = a->flags;
 
   bignum_canon(r);
   return OK;
