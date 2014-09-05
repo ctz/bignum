@@ -3,9 +3,6 @@
 
 /*
  * Bignum library string formatting and parsing functions.
- *
- * In general these depend on bignum-alloc too, and hence
- * the existence of an allocator.
  */
 
 #include <stddef.h>

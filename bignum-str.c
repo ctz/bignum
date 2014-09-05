@@ -41,7 +41,57 @@ error bignum_fmt_hex(const bignum *b, char *buf, size_t len)
 
 error bignum_fmt_dec(const bignum *b, char *buf, size_t len)
 {
-  return error_buffer_sz;
+  uint32_t ten = 10;
+  bignum tenbn = { &ten, &ten, 1, 0 };
+
+  BIGNUM_TMP(unitbn);
+
+  if (len < 2)
+    return error_buffer_sz;
+
+  BIGNUM_TMP(tmp);
+  BIGNUM_TMP(tmp2);
+  bignum_dup(&tmp, b);
+
+  /* Work from right to left */
+  char *out = buf + len;
+  *--out = 0;
+
+  /* Output single 0 for zero. */
+  if (bignum_eq(&tmp, &bignum_0))
+  {
+    if (out == buf)
+      return error_buffer_sz;
+    *--out = '0';
+  }
+
+  tmp.flags &= ~BIGNUM_F_NEG;
+
+  /* Otherwise, repeatedly divide by 10 to obtain digits. */
+  while (bignum_gt(&tmp, &bignum_0))
+  {
+    error err = bignum_divmod(&tmp2, &unitbn, &tmp, &tenbn);
+    assert(err == OK);
+    if (out == buf)
+      return error_buffer_sz;
+    assert(unitbn.v[0] < 10);
+    *--out = '0' + unitbn.v[0];
+    bignum_dup(&tmp, &tmp2);
+  }
+
+  /* Finally, add negative sign if necessary. */
+  if (bignum_is_negative(b))
+  {
+    if (out == buf)
+      return error_buffer_sz;
+
+    *--out = '-';
+  }
+
+  /* Adjust left */
+  memmove(buf, out, buf + len - out);
+
+  return OK;
 }
 
 error bignum_parse_str(bignum *r, const char *buf)
