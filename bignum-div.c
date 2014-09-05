@@ -110,7 +110,7 @@ static error find_k(uint32_t *k_out, bignum *tmp, const bignum *w, const bignum 
 #endif
 }
 
-/* This is basic schoolboy long multiplication:
+/* This is basic schoolboy long division:
  *
  * INPUT: integers x and y
  * OUTPUT: q = floor(x/y), r = x - yq.
