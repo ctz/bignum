@@ -1,5 +1,6 @@
 /*
- * sstr: fixed-sized buffer management for constructing strings
+ * sstr: fixed-sized buffer management for constructing and
+ * deconstructing strings
  *
  * This is a simple type containing start and end pointers, and
  * functions which write to/read from and advance the start pointer.
@@ -34,8 +35,16 @@ unsigned sstr_puts(sstr *s, const char *str);
 /** Take a character from s into c, advancing s by one. */
 unsigned sstr_takec(sstr *s, char *c);
 
+/** Take a character from s, advancing s by one.
+ *  Return 0 on overflow. */ 
+char sstr_take0(sstr *s);
+
 /** Take n characters from s into c, leaving s where it is. */
 unsigned sstr_peekn(sstr *s, char *c, size_t n);
+
+/** Take 1 character from s, returning it, and leaving s
+ *  where it is.  Returns 0 on overflow. */
+char sstr_peek0(sstr *s);
 
 /** Advance s by n characters. */
 unsigned sstr_skip(sstr *s, size_t n);

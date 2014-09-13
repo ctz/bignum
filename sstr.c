@@ -43,6 +43,13 @@ unsigned sstr_takec(sstr *s, char *c)
   return 0;
 }
 
+char sstr_take0(sstr *s)
+{
+  char r = 0;
+  sstr_takec(s, &r);
+  return r;
+}
+
 unsigned sstr_taken(sstr *s, char *c, size_t n)
 {
   while (--n)
@@ -62,6 +69,13 @@ unsigned sstr_peekn(sstr *s, char *c, size_t n)
     return 0;
   memcpy(c, s->start, bound - s->start);
   return 1;
+}
+
+char sstr_peek0(sstr *s)
+{
+  char r = 0;
+  sstr_peekn(s, &r, 1);
+  return r;
 }
 
 unsigned sstr_skip(sstr *s, size_t n)
