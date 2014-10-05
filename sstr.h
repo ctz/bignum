@@ -9,7 +9,7 @@
  * Compare 'dstr', which depends on an allocator and grows the
  * underlying storage as necessary.
  *
- * All functions return 1 on success, 0 on overflow.
+ * All functions return 0 on success, 1 on overflow.
  */
 
 #ifndef SSTR_H
