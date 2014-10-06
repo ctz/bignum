@@ -52,13 +52,10 @@ char sstr_take0(sstr *s)
 
 unsigned sstr_taken(sstr *s, char *c, size_t n)
 {
-  while (--n)
-  {
-    if (sstr_takec(s, c))
-      return 1;
-    c++;
-  }
+  if (sstr_peekn(s, c, n))
+    return 1;
 
+  s->start += n;
   return 0;
 }
 
@@ -81,7 +78,7 @@ char sstr_peek0(sstr *s)
 unsigned sstr_skip(sstr *s, size_t n)
 {
   char *bound = s->start + n;
-  if (bound >= s->end || bound < s->start)
+  if (bound > s->end || bound < s->start)
     return 1;
   s->start += n;
   return 0;

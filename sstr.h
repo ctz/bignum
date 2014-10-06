@@ -35,6 +35,9 @@ unsigned sstr_puts(sstr *s, const char *str);
 /** Take a character from s into c, advancing s by one. */
 unsigned sstr_takec(sstr *s, char *c);
 
+/** Take n characters from s into c, advancing s by n. */
+unsigned sstr_taken(sstr *s, char *c, size_t n);
+
 /** Take a character from s, advancing s by one.
  *  Return 0 on overflow. */ 
 char sstr_take0(sstr *s);
