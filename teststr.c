@@ -86,7 +86,17 @@ static void test_dstr_basic(void)
   dstr_puts(&d, "hello world");
   dstr_putf(&d, "\nhello earth %d %d %x\n", 1, 2, 0xffff);
   dstr_put0(&d);
-  printf("%s\n", d.start);
+  TEST_CHECK(strcmp("hello world\nhello earth 1 2 ffff\n", d.start) == 0);
+  dstr_free(&d);
+}
+
+static void test_dstr_hex(void)
+{
+  dstr d;
+  dstr_init(&d);
+  dstr_puthex(&d, (void *) "1234:", 5);
+  dstr_put0(&d);
+  TEST_CHECK(strcmp("313233343a", d.start) == 0);
   dstr_free(&d);
 }
 
@@ -94,5 +104,6 @@ TEST_LIST = {
   { "sstr-take", test_sstr_take },
   { "sstr-peek", test_sstr_peek },
   { "dstr-basic", test_dstr_basic },
+  { "dstr-hex", test_dstr_hex },
   { 0 }
 };

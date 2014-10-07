@@ -52,6 +52,11 @@ unsigned require(dstr *d, size_t extra)
   return 0;
 }
 
+unsigned dstr_expand(dstr *d, size_t want)
+{
+  return require(d, want);
+}
+
 unsigned dstr_put(dstr *d, const char *buf, size_t len)
 {
   if (require(d, len))
@@ -82,6 +87,7 @@ unsigned dstr_vputf(dstr *d, const char *fmt, va_list ap)
   /* First, we do a 'counting' format operation.
    * This may actually work if we have enough buffer available. */
   va_list count_ap;
+  
   va_copy(count_ap, ap);
 
   size_t available = d->end - d->wr;
@@ -123,6 +129,20 @@ unsigned dstr_putf(dstr *d, const char *fmt, ...)
   unsigned e = dstr_vputf(d, fmt, ap);
   va_end(ap);
   return e;
+}
+
+static const char *hex = "0123456789abcdef";
+
+unsigned dstr_puthex(dstr *d, const uint8_t *buf, size_t len)
+{
+  for (size_t i = 0; i < len; i++)
+  {
+    if (dstr_putc(d, hex[(buf[i] >> 4) & 0xf]) ||
+        dstr_putc(d, hex[buf[i] & 0xf]))
+      return 1;
+  }
+
+  return 0;
 }
 
 size_t dstr_allocated(dstr *d)

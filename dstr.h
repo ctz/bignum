@@ -55,6 +55,13 @@ unsigned dstr_putf(dstr *d, const char *fmt, ...)
 /** Append a vsprintf-like formatted expression. */
 unsigned dstr_vputf(dstr *d, const char *fmt, va_list arg);
 
+/** Append the buffer buf[:len] as lower case hex to d. */
+unsigned dstr_puthex(dstr *d, const uint8_t *buf, size_t len);
+
+/** Arranges for the wr pointer to have at least len
+ *  bytes available for writing. */
+unsigned dstr_expand(dstr *d, size_t len);
+
 /** Difference between start and end pointers. */
 size_t dstr_allocated(dstr *d);
 

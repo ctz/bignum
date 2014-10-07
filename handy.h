@@ -30,18 +30,19 @@
 
 /* Error handling macros.
  *
- * These expect a numeric 'error' typedef, where non-zero
- * indicates an error. */
+ * These expect a zero = success, non-zero = error convention.
+ * Errors should be storable in an unsigned long.
+ */
 
 /** Error: return. 
  *  
  *  If the expression fails, return the error from this function. */
-#define ER(expr) do { error err_ = (expr); if (err_) return err_; } while (0)
+#define ER(expr) do { unsigned long err_ = (expr); if (err_) return err_; } while (0)
 
 /** Error: goto.
  *
  *  If the expression fails, goto x_err.  Assumes defn of label
- *  x_err and 'error err'. */
+ *  x_err and 'error_type err'. */
 #define EG(expr) do { err = (expr); if (err) goto x_err; } while (0)
 
 /** Like memset(ptr, 0, len), but not allowed to be removed by
