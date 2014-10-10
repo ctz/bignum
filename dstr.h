@@ -38,6 +38,9 @@ void dstr_init(dstr *d);
  *  Leaves d empty (with start = end = wr = NULL). */
 void dstr_free(dstr *d);
 
+/** Append the buffer buf to d. */
+unsigned dstr_put(dstr *d, const char *buf, size_t len);
+
 /** Append a single character c to d. */
 unsigned dstr_putc(dstr *d, char c);
 

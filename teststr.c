@@ -88,6 +88,23 @@ static void test_dstr_basic(void)
   dstr_put0(&d);
   TEST_CHECK(strcmp("hello world\nhello earth 1 2 ffff\n", d.start) == 0);
   dstr_free(&d);
+
+  dstr_init(&d);
+  for (size_t i = 0; i < 1024; i++)
+  {
+    dstr_putc(&d, 'A');
+  }
+  TEST_CHECK(dstr_used(&d) == 1024);
+  dstr_free(&d);
+
+  dstr_init(&d);
+  for (size_t i = 0; i < 128; i++)
+  {
+    char buf[257] = { 'a' };
+    dstr_put(&d, buf, sizeof buf);
+  }
+  TEST_CHECK(dstr_used(&d) == 257 * 128);
+  dstr_free(&d);
 }
 
 static void test_dstr_hex(void)
