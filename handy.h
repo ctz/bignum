@@ -66,4 +66,18 @@ static inline void mem_clean(volatile void *v, size_t len)
   }
 }
 
+static inline unsigned mem_eq(const void *va, const void *vb, size_t len)
+{
+  const uint8_t *a = va;
+  const uint8_t *b = vb;
+  uint8_t diff = 0;
+
+  while (len--)
+  {
+    diff |= *a++ ^ *b++;
+  }
+
+  return !diff;
+}
+
 #endif
