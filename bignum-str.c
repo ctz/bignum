@@ -160,7 +160,7 @@ static error parse_hex(bignum *r, sstr *s)
     }
 
     error err = bignum_set_byte(r, byte, i - 1);
-    if (!err)
+    if (err)
       return err;
   }
 
