@@ -127,7 +127,7 @@ static unsigned take_hexbyte(sstr *s, uint8_t *b)
       parse_hexbyte(l, &rl))
     return 1;
 
-  *b = (rh << 8) | rl;
+  *b = (rh << 4) | rl;
   return 0;
 }
 
