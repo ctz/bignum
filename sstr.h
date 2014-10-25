@@ -9,7 +9,7 @@
  * Compare 'dstr', which depends on an allocator and grows the
  * underlying storage as necessary.
  *
- * All functions return 1 on success, 0 on overflow.
+ * All functions return 0 on success, 1 on overflow.
  */
 
 #ifndef SSTR_H
@@ -34,6 +34,9 @@ unsigned sstr_puts(sstr *s, const char *str);
 
 /** Take a character from s into c, advancing s by one. */
 unsigned sstr_takec(sstr *s, char *c);
+
+/** Take n characters from s into c, advancing s by n. */
+unsigned sstr_taken(sstr *s, char *c, size_t n);
 
 /** Take a character from s, advancing s by one.
  *  Return 0 on overflow. */ 

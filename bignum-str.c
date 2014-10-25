@@ -19,21 +19,21 @@ error bignum_fmt_hex(const bignum *b, char *buf, size_t len)
   size_t bytes = bignum_len_bytes(b);
   size_t sign = bignum_is_negative(b);
 
-  if ((sign && !sstr_putc(&out, '-')) ||
-      !sstr_putc(&out, '0') ||
-      !sstr_putc(&out, 'x'))
+  if ((sign && sstr_putc(&out, '-')) ||
+      sstr_putc(&out, '0') ||
+      sstr_putc(&out, 'x'))
     return error_buffer_sz;
 
   for (size_t i = bytes; i > 0; i--)
   {
     uint8_t byte = bignum_get_byte(b, i - 1);
 
-    if (!sstr_putc(&out, hex_chars[(byte >> 4) & 0xf]) ||
-        !sstr_putc(&out, hex_chars[byte & 0xf]))
+    if (sstr_putc(&out, hex_chars[(byte >> 4) & 0xf]) ||
+        sstr_putc(&out, hex_chars[byte & 0xf]))
       return error_buffer_sz;
   }
 
-  if (!sstr_put0(&out))
+  if (sstr_put0(&out))
     return error_buffer_sz;
 
   return OK;
@@ -104,15 +104,15 @@ static unsigned parse_hexbyte(char x, uint8_t *out)
   if (x >= '0' && x <= '9')
   {
     *out = x - '0';
-    return 1;
+    return 0;
   } else if (x >= 'A' && x <= 'F') {
     *out = x - 'A' + 10;
-    return 1;
+    return 0;
   } else if (x >= 'a' && x <= 'f') {
     *out = x - 'a' + 10;
-    return 1;
-  } else {
     return 0;
+  } else {
+    return 1;
   }
 }
 
@@ -121,14 +121,14 @@ static unsigned take_hexbyte(sstr *s, uint8_t *b)
   char h, l;
   uint8_t rh, rl;
   
-  if (!sstr_takec(s, &h) ||
-      !sstr_takec(s, &l) ||
-      !parse_hexbyte(h, &rh) ||
-      !parse_hexbyte(l, &rl))
-    return 0;
+  if (sstr_takec(s, &h) ||
+      sstr_takec(s, &l) ||
+      parse_hexbyte(h, &rh) ||
+      parse_hexbyte(l, &rl))
+    return 1;
 
-  *b = (rh << 8) | rl;
-  return 1;
+  *b = (rh << 4) | rl;
+  return 0;
 }
 
 static error parse_hex(bignum *r, sstr *s)
@@ -150,17 +150,17 @@ static error parse_hex(bignum *r, sstr *s)
     {
       /* Take a single nibble */
       char l;
-      if (!sstr_takec(s, &l) ||
-          !parse_hexbyte(l, &byte))
+      if (sstr_takec(s, &l) ||
+          parse_hexbyte(l, &byte))
         return error_invalid_string;
     } else {
       /* Take a byte */
-      if (!take_hexbyte(s, &byte))
+      if (take_hexbyte(s, &byte))
         return error_invalid_string;
     }
 
     error err = bignum_set_byte(r, byte, i - 1);
-    if (!err)
+    if (err)
       return err;
   }
 
@@ -178,7 +178,7 @@ error parse_dec(bignum *r, sstr *s)
   char c;
   error err;
 
-  while (sstr_takec(s, &c))
+  while (!sstr_takec(s, &c))
   {
     if (c >= '0' && c <= '9')
       digit = c - '0';
@@ -203,16 +203,16 @@ error bignum_parse_strl(bignum *r, const char *buf, size_t len)
   unsigned hex = 0, neg = 0;
   
   /* Slurp any '-' first. */
-  if (sstr_peekn(&s, &negmark, 1) &&
+  if (!sstr_peekn(&s, &negmark, 1) &&
       negmark == '-' &&
-      sstr_skip(&s, 1))
+      !sstr_skip(&s, 1))
     neg = 1;
 
   /* Slurp any '0x' next. */
-  if (sstr_peekn(&s, hexmark, sizeof hexmark) &&
+  if (!sstr_peekn(&s, hexmark, sizeof hexmark) &&
       hexmark[0] == '0' &&
       hexmark[1] == 'x' &&
-      sstr_skip(&s, sizeof hexmark))
+      !sstr_skip(&s, sizeof hexmark))
     hex = 1;
 
   error err;

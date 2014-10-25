@@ -9,10 +9,10 @@ unsigned sstr_putc(sstr *s, char c)
   {
     *s->start = c;
     s->start++;
-    return 1;
+    return 0;
   }
 
-  return 0;
+  return 1;
 }
 
 unsigned sstr_put0(sstr *s)
@@ -24,11 +24,11 @@ unsigned sstr_puts(sstr *s, const char *str)
 {
   while (*str)
   {
-    if (!sstr_putc(s, *str++))
-      return 0;
+    if (sstr_putc(s, *str++))
+      return 1;
   }
 
-  return 1;
+  return 0;
 }
 
 unsigned sstr_takec(sstr *s, char *c)
@@ -37,10 +37,10 @@ unsigned sstr_takec(sstr *s, char *c)
   {
     *c = *s->start;
     s->start++;
-    return 1;
+    return 0;
   }
 
-  return 0;
+  return 1;
 }
 
 char sstr_take0(sstr *s)
@@ -52,23 +52,20 @@ char sstr_take0(sstr *s)
 
 unsigned sstr_taken(sstr *s, char *c, size_t n)
 {
-  while (--n)
-  {
-    if (!sstr_takec(s, c))
-      return 0;
-    c++;
-  }
+  if (sstr_peekn(s, c, n))
+    return 1;
 
-  return 1;
+  s->start += n;
+  return 0;
 }
 
 unsigned sstr_peekn(sstr *s, char *c, size_t n)
 {
   char *bound = s->start + n;
-  if (bound >= s->end || bound < s->start)
-    return 0;
+  if (bound > s->end || bound < s->start)
+    return 1;
   memcpy(c, s->start, bound - s->start);
-  return 1;
+  return 0;
 }
 
 char sstr_peek0(sstr *s)
@@ -81,10 +78,10 @@ char sstr_peek0(sstr *s)
 unsigned sstr_skip(sstr *s, size_t n)
 {
   char *bound = s->start + n;
-  if (bound >= s->end || bound < s->start)
-    return 0;
+  if (bound > s->end || bound < s->start)
+    return 1;
   s->start += n;
-  return 1;
+  return 0;
 }
 
 size_t sstr_left(sstr *s)

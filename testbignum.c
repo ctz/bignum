@@ -459,6 +459,7 @@ static void inequality(void)
 {
   check("0x1 == 0x1");
   check("0x0 != 0x1");
+  check("0x123456 == 1193046");
   check("1 == 1");
   check("0 != 1");
   check("-1 < 1");

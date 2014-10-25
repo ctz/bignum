@@ -89,8 +89,8 @@ error bignum_dup(bignum *r, const bignum *a)
     r->vtop = vr;
   }
 
-  r->flags = a->flags;
-
+  r->flags = 0;
+  bignum_setsign(r, bignum_getsign(a));
   bignum_canon(r);
   return OK;
 }
