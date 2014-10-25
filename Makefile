@@ -2,7 +2,7 @@ FEATURES =
 # -DWITH_MONTY
 CFLAGS += -g -O0 -std=gnu99 -Wall -Wextra -Werror -Wno-unused-parameter $(FEATURES)
 
-all: testbignum
+all: out testbignum
 
 BIGNUM = bignum.o bignum-math.o bignum-str.o \
 	 bignum-add.o bignum-sub.o bignum-mul.o \
@@ -14,11 +14,22 @@ BIGNUM = bignum.o bignum-math.o bignum-str.o \
 
 testbignum: $(BIGNUM) testbignum.o
 
+libbignum.a: $(BIGNUM)
+	ar rcD $@ $^
+
 clean:
 	rm -f *.o *.pyc testbignum
 
 test: testbignum
 	./testbignum
 
+gentests:
+	python gentests.py
+
 soaktest: testbignum gentests.py
 	python gentests.py --continuous | ./testbignum --no-exec stdin
+
+.PHONY: out
+out: libbignum.a bignum.h bignum-str.h sstr.h
+	mkdir -p $@
+	cp -v $^ $@
