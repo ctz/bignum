@@ -28,6 +28,10 @@
     (y) = __tmp; \
   } while (0)
 
+/** Stringify its argument. */
+#define STRINGIFY(x) STRINGIFY_(x)
+#define STRINGIFY_(x) #x
+
 /* Error handling macros.
  *
  * These expect a zero = success, non-zero = error convention.
@@ -66,6 +70,8 @@ static inline void mem_clean(volatile void *v, size_t len)
   }
 }
 
+/** Returns 1 if len bytes at va equal len bytes at vb, 0 if they do not.
+ *  Does not leak length of common prefix through timing. */
 static inline unsigned mem_eq(const void *va, const void *vb, size_t len)
 {
   const uint8_t *a = va;
