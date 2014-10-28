@@ -14,7 +14,7 @@ BIGNUM = bignum.o bignum-math.o bignum-str.o \
 
 testbignum: $(BIGNUM) testbignum.o
 
-libbignum.a: $(BIGNUM)
+libbignum.a: $(BIGNUM) dstr.o
 	ar rcD $@ $^
 
 teststr: sstr.o dstr.o teststr.o
@@ -33,6 +33,6 @@ soaktest: testbignum gentests.py
 	python gentests.py --continuous | ./testbignum --no-exec stdin
 
 .PHONY: out
-out: libbignum.a bignum.h bignum-str.h sstr.h
+out: libbignum.a bignum.h bignum-str.h sstr.h dstr.h handy.h ext/cutest.h
 	mkdir -p $@
 	cp -v $^ $@
