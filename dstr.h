@@ -8,7 +8,7 @@
  * Compare 'sstr', which depends on an underlying buffer of fixed
  * size.
  *
- * All functions return 1 on success, 0 on allocation failure.
+ * All functions return 0 on success, non-zero on allocation failure.
  */
 
 #ifndef DSTR_H
