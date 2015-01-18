@@ -21,7 +21,7 @@ error bignum_check(const bignum *b)
       b->v > b->vtop ||
       bignum_len_words(b) > b->words ||
       b->words == 0 ||
-//      b->words > BIGNUM_MAX_WORDS ||
+      b->words > BIGNUM_MAX_WORDS ||
       (b->flags & ~BIGNUM_F__ALL))
     return error_invalid_bignum;
   return OK;
