@@ -1,6 +1,4 @@
-FEATURES =
-# -DWITH_MONTY
-CFLAGS += -g -O0 -std=gnu99 -Wall -Wextra -Werror -Wno-unused-parameter $(FEATURES)
+CFLAGS += -g -O0 -std=gnu99 -Wall -Wextra -Werror -Wno-unused-parameter
 
 all: out testbignum teststr
 
@@ -22,7 +20,7 @@ teststr: sstr.o dstr.o teststr.o
 clean:
 	rm -f *.o *.pyc testbignum teststr
 
-test: testbignum
+test: testbignum teststr
 	./teststr
 	./testbignum
 

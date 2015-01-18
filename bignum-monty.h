@@ -20,6 +20,10 @@ unsigned bignum_monty_setup(const bignum *m, monty_ctx *mont);
 /** Multiplies x by R mod m. */
 error bignum_monty_normalise(bignum *xR, const bignum *x, const bignum *m,
                              const monty_ctx *monty);
+
+/** Multiplies x by 2R mod m. */
+error bignum_monty_normalise2(bignum *xRR, const bignum *x, const bignum *m,
+                              const monty_ctx *monty);
                              
 /** Sets A = xy mod m.
  */
@@ -33,9 +37,9 @@ error bignum_monty_modmul(bignum *A, const bignum *x, const bignum *y, const big
 error bignum_monty_modmul_normalised(bignum *A, const bignum *x, const bignum *y, const bignum *m,
                                      const monty_ctx *monty);
 
-/** Sets A = x^2 mod m.
+/** Sets A = x^2R^-1 mod m.
  */
-error bignum_monty_sqr(bignum *A, const bignum *x, const bignum *m,
-                       const monty_ctx *monty);
+error bignum_monty_sqr_normalised(bignum *A, const bignum *x, const bignum *m,
+                                  const monty_ctx *monty);
 
 #endif

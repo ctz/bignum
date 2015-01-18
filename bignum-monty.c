@@ -4,7 +4,6 @@
 #include <stdio.h>
 
 #include "bignum.h"
-//#define BIGNUM_DEBUG_ENABLED
 #include "bignum-monty.h"
 #include "bignum-dbg.h"
 #include "handy.h"
@@ -39,7 +38,6 @@ static uint32_t modinv_u32(uint32_t n)
 /* Fills in *mont and returns 1 if montgomery reduction will work. */
 unsigned bignum_monty_setup(const bignum *m, monty_ctx *mont)
 {
-#ifdef WITH_MONTY
   if (bignum_is_odd(m))
   {
     /* R = b^n, where n is the number of digits in modulus. */
@@ -50,21 +48,28 @@ unsigned bignum_monty_setup(const bignum *m, monty_ctx *mont)
     mont->mprime = modinv_u32(m->v[0]);
     return 1;
   }
-#else
-  (void) modinv_u32;
-#endif
 
   return 0;
+}
+  
+error monty_normalise_n(bignum *xR, const bignum *x, const bignum *m, size_t R_shift)
+{
+  BIGNUM_TMP(tmp);
+  ER(bignum_dup(&tmp, x));
+  ER(bignum_shl(&tmp, R_shift));
+  ER(bignum_mod(xR, &tmp, m));
+  return OK;
+}
+
+error bignum_monty_normalise2(bignum *xR, const bignum *x, const bignum *m, const monty_ctx *monty)
+{
+  return monty_normalise_n(xR, x, m, monty->R_shift * 2);
 }
 
 /* Sets xR = xR mod m. */
 error bignum_monty_normalise(bignum *xR, const bignum *x, const bignum *m, const monty_ctx *monty)
 {
-  BIGNUM_TMP(tmp);
-  ER(bignum_dup(&tmp, x));
-  ER(bignum_shl(&tmp, monty->R_shift));
-  ER(bignum_mod(xR, &tmp, m));
-  return OK;
+  return monty_normalise_n(xR, x, m, monty->R_shift);
 }
 
 static error bignum_monty_modmul_normalised_reduce(bignum *A, const bignum *x, const bignum *y, const bignum *m,
@@ -84,14 +89,15 @@ error bignum_monty_modmul_normalised(bignum *A, const bignum *x, const bignum *y
   assert(!bignum_check(x));
   assert(!bignum_check(y));
   assert(!bignum_check(m));
+  
+  bignum_dump("  x", x);
+  bignum_dump("  y", y);
+  bignum_dump("  m", m);
+
 
   if (!(bignum_gte(x, &bignum_0) && bignum_lt(x, m)) ||
       !(bignum_gte(y, &bignum_0) && bignum_lt(y, m)))
     return bignum_monty_modmul_normalised_reduce(A, x, y, m, monty);
-
-  bignum_dump("x", x);
-  bignum_dump("y", y);
-  bignum_dump("m", m);
 
   assert(A != x && A != y);
 
@@ -109,30 +115,24 @@ error bignum_monty_modmul_normalised(bignum *A, const bignum *x, const bignum *y
     uint32_t u = (word(A, 0) + word(x, i) * word(y, 0)) * monty->mprime;
 
     /* A <- (A + x_i * y + u_i * m) / b. */
-    bignum_dump("A", A);
 
     /* + x_i * y */
     ER(bignum_mulw(&tmp, y, word(x, i)));
     ER(bignum_addl(A, &tmp));
-    bignum_dump("temp", &tmp);
 
     /* + u_i * m */
     ER(bignum_mulw(&tmp, m, u));
     ER(bignum_addl(A, &tmp));
-    bignum_dump("temp2", &tmp);
-
-    bignum_dump("A'", A);
 
     /* / b */
     ER(bignum_shr(A, BIGNUM_BITS));
   }
 
-  bignum_dump("result", A);
   /* 3. If A >= m then A <- A - m. */
   if (bignum_gte(A, m))
     ER(bignum_subl(A, m));
 
-  bignum_dump("result-m", A);
+  bignum_dump("  result-m", A);
   return OK;
 }
 
@@ -159,7 +159,7 @@ static error bignum_monty_reduce(bignum *A, const bignum *T, const bignum *m,
   }
 
   /* 3. A <- A / b^n */
-  bignum_dump("A-pre-div", A);
+  bignum_dump("  A-pre-div", A);
   ER(bignum_shr(A, monty->R_shift));
   
   /* 4. If A >= m then A <- A - m. */
@@ -167,22 +167,6 @@ static error bignum_monty_reduce(bignum *A, const bignum *T, const bignum *m,
     ER(bignum_subl(A, m));
 
   return OK;
-}
-
-error bignum_monty_sqr(bignum *A, const bignum *x, const bignum *m,
-                       const monty_ctx *monty)
-{
-  BIGNUM_TMP_SZ(tmp, BIGNUM_MAX_WORDS * 4);
-  bignum_dump("x", x);
-  ER(bignum_sqr(&tmp, x));
-
-  return bignum_monty_reduce(A, &tmp, m, monty);
-#if 0
-  ER(bignum_shl(&tmp, monty->R_shift));
-  bignum_dump("x^2", &tmp);
-  return bignum_monty_reduce(A, &tmp, m, monty);
-#endif
-  (void) bignum_monty_reduce;
 }
 
 static error bignum_monty_modmul_noalias(bignum *A, const bignum *x, const bignum *y, const bignum *m,
@@ -215,3 +199,11 @@ error bignum_monty_modmul(bignum *A, const bignum *x, const bignum *y, const big
     return bignum_monty_modmul_noalias(A, x, y, m, monty);
 }
 
+error bignum_monty_sqr_normalised(bignum *A, const bignum *x, const bignum *m,
+                                  const monty_ctx *monty)
+{
+  BIGNUM_TMP(r);
+  ER(bignum_monty_modmul_normalised(&r, x, x, m, monty));
+  return bignum_dup(A, &r);
+  (void) bignum_monty_reduce;
+}

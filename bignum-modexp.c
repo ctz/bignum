@@ -9,7 +9,60 @@
 #include "bignum-monty.h"
 #include "handy.h"
 
-#define WINDOW_SIZE 2
+error bignum_monty_modexp(bignum *A, const bignum *x, const bignum *e, const bignum *m,
+                          monty_ctx *monty)
+{
+  /* 1. x' = Mont(x, R^2 mod m). */
+  BIGNUM_TMP(tmp);
+  BIGNUM_TMP(x_prime);
+  bignum_setu(&tmp, 1);
+  ER(bignum_monty_normalise2(&tmp, &tmp, m, monty));
+  ER(bignum_monty_modmul_normalised(&x_prime, x, &tmp, m, monty));
+  bignum_dump("x~", &x_prime);
+
+  /* A = R mod m. */
+  bignum_setu(A, 1);
+  ER(bignum_monty_normalise(A, A, m, monty));
+  bignum_dump("A", A);
+
+  /* 2. For i from t down to 0 do the following: */
+  for (size_t i = bignum_len_bits(e); i != 0; i--)
+  {
+    /* 2.1 A = Mont(A, A) */
+    ER(bignum_monty_modmul_normalised(&tmp, A, A, m, monty));
+    ER(bignum_dup(A, &tmp));
+
+    /* 2.2 If ei == 1 then A = Mont(A, x') */
+    if (bignum_get_bit(e, i - 1) == 1)
+    {
+      ER(bignum_monty_modmul_normalised(&tmp, A, &x_prime, m, monty));
+      ER(bignum_dup(A, &tmp));
+    }
+  }
+
+  /* 3. A = Mont(A, 1) */
+  bignum_setu(&x_prime, 1);
+  ER(bignum_monty_modmul_normalised(&tmp, A, &x_prime, m, monty));
+  ER(bignum_dup(A, &tmp));
+  return OK;
+}
+
+error bignum_slow_modexp(bignum *r, const bignum *a, const bignum *b, const bignum *p)
+{
+  BIGNUM_TMP(S);
+  ER(bignum_dup(&S, a));
+  bignum_setu(r, 1);
+  for (size_t i = 0; i < bignum_len_bits(b); i++)
+  {
+    if (bignum_get_bit(b, i) == 1)
+    {
+      ER(bignum_modmul(r, r, &S, p));
+    }
+    ER(bignum_modmul(&S, &S, &S, p));
+  }
+  
+  return OK;
+}
 
 error bignum_modexp(bignum *r, const bignum *a, const bignum *b, const bignum *p)
 {
@@ -17,75 +70,10 @@ error bignum_modexp(bignum *r, const bignum *a, const bignum *b, const bignum *p
   assert(!bignum_check(a));
   assert(!bignum_check(b));
   assert(!bignum_check(p));
-
+  
   monty_ctx monty;
-  unsigned use_monty = bignum_monty_setup(p, &monty);
-
-  BIGNUM_TMP(tmp);
-  (void) tmp;
-
-  bignum_dump("a", a);
-  bignum_dump("b", b);
-  bignum_dump("p", p);
-
-  size_t tabsize = 1 << WINDOW_SIZE;
-  bignum tab[1 << WINDOW_SIZE];
-  uint32_t tab_words[BIGNUM_MAX_WORDS * tabsize];
-  for (size_t i = 0; i < tabsize; i++)
-  {
-    uint32_t *w = &tab_words[i * BIGNUM_MAX_WORDS];
-    *w = 0;
-    tab[i].v = w;
-    tab[i].vtop = w;
-    tab[i].words = BIGNUM_MAX_WORDS;
-    tab[i].flags = 0;
-  }
-
-  bignum_setu(&tab[0], 1);
-  if (use_monty)
-    ER(bignum_monty_normalise(&tab[0], &tab[0], p, &monty));
-  bignum_dump("tab_0", &tab[0]);
-
-  for (size_t i = 1; i < tabsize; i++)
-  {
-    ER(bignum_modmul(&tab[i], &tab[i - 1], a, p));
-    bignum_dump("tab", &tab[i]);
-  }
-
-  bignum_dump("b", b);
-
-  ER(bignum_dup(r, &tab[0]));
-  size_t j = bignum_len_bits(b);
-
-  while (1)
-  {
-    size_t bits = (j >= WINDOW_SIZE) ? WINDOW_SIZE : j;
-    uint32_t v = bignum_get_bits(b, j - bits, bits);
-
-    for (size_t s = 0; s < bits; s++)
-    {
-      if (use_monty)
-        ER(bignum_monty_sqr(r, r, p, &monty));
-      else
-        ER(bignum_modmul(r, r, r, p));
-    }
-
-    bignum_dump("after-sqr", r);
-
-    if (use_monty)
-      ER(bignum_monty_modmul_normalised(&tmp, r, &tab[v], p, &monty));
-    else
-      ER(bignum_modmul(&tmp, r, &tab[v], p));
-    ER(bignum_dup(r, &tmp));
-
-    bignum_dump("int", r);
-
-    j -= bits; 
-    if (j == 0)
-      break;
-  }
-
-  bignum_dump("r", r);
-  return OK;
+  if (bignum_monty_setup(p, &monty))
+    return bignum_monty_modexp(r, a, b, p, &monty);
+  else
+    return bignum_slow_modexp(r, a, b, p);
 }
-

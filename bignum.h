@@ -358,6 +358,4 @@ error bignum_extended_gcd(bignum *v, bignum *a, bignum *b,
  *  Arguments may alias in any combination. */
 error bignum_modinv(bignum *z, const bignum *a, const bignum *m);
 
-error bignum_monty_modexp(bignum *r, const bignum *a, const bignum *b, const bignum *p);
-
 #endif

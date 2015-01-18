@@ -23,7 +23,6 @@ static error bignum_modmul_slow(bignum *r, const bignum *a, const bignum *b, con
 
 error bignum_modmul(bignum *r, const bignum *a, const bignum *b, const bignum *p)
 {
-#ifdef WITH_MONTY
   monty_ctx monty;
   if (bignum_monty_setup(p, &monty))
   {
@@ -31,8 +30,5 @@ error bignum_modmul(bignum *r, const bignum *a, const bignum *b, const bignum *p
   } else {
     return bignum_modmul_slow(r, a, b, p);
   }
-#else
-  return bignum_modmul_slow(r, a, b, p);
-#endif
 }
 
