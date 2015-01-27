@@ -54,29 +54,17 @@
  *  compilers. */
 static inline void mem_clean(volatile void *v, size_t len)
 {
-  while (len >= 4)
-  {
-    volatile uint32_t *u32 = v;
-    *u32++ = 0;
-    v = u32;
-    len -= 4;
-  }
-
-  while (len)
-  {
-    volatile uint8_t *u8 = v;
-    *u8++ = 0;
-    v = u8;
-    len--;
-  }
+  typedef void * (memset_like)(volatile void *v, int c, size_t len);
+  static volatile memset_like *memset_impl = (volatile memset_like *) memset;
+  memset_impl(v, 0, len);
 }
 
 /** Returns 1 if len bytes at va equal len bytes at vb, 0 if they do not.
  *  Does not leak length of common prefix through timing. */
 static inline unsigned mem_eq(const void *va, const void *vb, size_t len)
 {
-  const uint8_t *a = va;
-  const uint8_t *b = vb;
+  const volatile uint8_t *a = va;
+  const volatile uint8_t *b = vb;
   uint8_t diff = 0;
 
   while (len--)
