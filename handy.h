@@ -37,13 +37,12 @@
 /* Error handling macros.
  *
  * These expect a zero = success, non-zero = error convention.
- * Errors should be storable in an unsigned long.
  */
 
 /** Error: return. 
  *  
  *  If the expression fails, return the error from this function. */
-#define ER(expr) do { unsigned long err_ = (expr); if (err_) return err_; } while (0)
+#define ER(expr) do { typeof (expr) err_ = (expr); if (err_) return err_; } while (0)
 
 /** Error: goto.
  *
