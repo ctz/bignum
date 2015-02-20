@@ -3,6 +3,7 @@
 
 #include <stddef.h>
 #include <stdint.h>
+#include <string.h>
 
 /*
  * Handy CPP defines and C inline functions.
@@ -54,9 +55,11 @@
  *  compilers. */
 static inline void mem_clean(volatile void *v, size_t len)
 {
-  typedef void * (memset_like)(volatile void *v, int c, size_t len);
-  static volatile memset_like *memset_impl = (volatile memset_like *) memset;
-  memset_impl(v, 0, len);
+  if (len)
+  {
+    memset((void *) v, 0, len);
+    (void) *((volatile uint8_t *) v);
+  }
 }
 
 /** Returns 1 if len bytes at va equal len bytes at vb, 0 if they do not.
