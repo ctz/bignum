@@ -22,7 +22,7 @@ def wordsz(n):
 def random_carry(sz):
     """
     Make a number which is sz bits long, and has some
-    32-bit words set or cleared to execise carry/borrow
+    32-bit words set or cleared to exercise carry/borrow
     code paths.
     """
 
@@ -74,7 +74,7 @@ def gen_tests_with_file(fout, funcname, *args, **kwargs):
 
 def gcd(a, b):
     while b:
-        a, b = b, a%b
+        a, b = b, a % b
     return a
 
 def egcd_v(a, b): return egcd(a, b)[0]
