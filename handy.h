@@ -1,7 +1,6 @@
 #ifndef HANDY_H
 #define HANDY_H
 
-#include <string.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <string.h>
